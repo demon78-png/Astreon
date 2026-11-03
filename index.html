@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>ASTREON — Discover Beyond the Screen</title>
+    <meta name="description" content="ASTREON is a premium digital entertainment discovery platform to explore films, TV series, official trailers, editorial news, and curate your personal watchlist." />
+    <meta name="theme-color" content="#080A12" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ASTREON" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="canonical" href="https://ais-pre-6r3hrvm6drtg3rbntiafus-974395331959.europe-west2.run.app" />
+
+    <!-- OpenGraph Metadata -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ASTREON" />
+    <meta property="og:title" content="ASTREON — Discover Beyond the Screen" />
+    <meta property="og:description" content="Explore films, TV series, official trailers, editorial news, and curate your personal watchlist." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&h=630&q=80" />
+    <meta property="og:url" content="https://ais-pre-6r3hrvm6drtg3rbntiafus-974395331959.europe-west2.run.app" />
+
+    <!-- Twitter / X Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ASTREON — Discover Beyond the Screen" />
+    <meta name="twitter:description" content="Explore films, TV series, official trailers, editorial news, and curate your personal watchlist." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&h=630&q=80" />
+
+    <!-- Structured Data (Schema.org JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ASTREON",
+      "alternateName": "ASTREON Entertainment Discovery",
+      "url": "https://ais-pre-6r3hrvm6drtg3rbntiafus-974395331959.europe-west2.run.app",
+      "description": "ASTREON is a premium digital entertainment discovery platform to explore films, TV series, official trailers, editorial news, and curate your personal watchlist.",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Gracefully prevent unhandled WebSocket rejections in environments where HMR is disabled
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event && event.reason && (
+          String(event.reason).includes('WebSocket') ||
+          String(event.reason?.message).includes('WebSocket')
+        )) {
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('error', function(event) {
+        if (event && (
+          String(event.message).includes('WebSocket') ||
+          String(event.filename).includes('@vite/client')
+        )) {
+          event.preventDefault();
+        }
+      });
+    </script>
+  </head>
+  <body class="bg-[#080A12] text-[#F8FAFC] antialiased selection:bg-[#8B5CF6] selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

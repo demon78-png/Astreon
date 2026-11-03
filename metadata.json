@@ -1,0 +1,6 @@
+{
+  "name": "ASTREON",
+  "description": "ASTREON — Discover Beyond the Screen. Premium entertainment discovery platform for movies, TV series, official trailers, curated editorial news, and personal watchlists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

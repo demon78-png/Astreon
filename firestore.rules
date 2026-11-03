@@ -1,0 +1,147 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Security helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'danny2010qwert@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUser(data) {
+      return data.uid is string &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150;
+    }
+
+    function isValidWatchlist(data) {
+      return data.mediaId is number &&
+             data.mediaType in ['movie', 'tv'] &&
+             data.title is string && data.title.size() <= 200;
+    }
+
+    function isValidFavorite(data) {
+      return data.mediaId is number &&
+             data.mediaType in ['movie', 'tv'] &&
+             data.title is string && data.title.size() <= 200;
+    }
+
+    function isValidSearch(data) {
+      return data.query is string && data.query.size() <= 200;
+    }
+
+    function isValidReview(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.mediaId is number &&
+             data.mediaType in ['movie', 'tv'] &&
+             data.rating is number && data.rating >= 1 && data.rating <= 10 &&
+             data.reviewText is string && data.reviewText.size() >= 5 && data.reviewText.size() <= 2000 &&
+             data.status in ['published', 'pending', 'flagged'];
+    }
+
+    function isValidReport(data) {
+      return data.reporterId is string && data.reporterId == request.auth.uid &&
+             data.targetType in ['review', 'article', 'user'] &&
+             data.targetId is string && data.targetId.size() <= 128 &&
+             data.reason is string && data.reason.size() <= 1000;
+    }
+
+    // User profiles & Private Subcollections
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isOwner(userId) && isValidUser(incoming());
+      allow delete: if isOwner(userId) || isAdmin();
+
+      // Private User Watchlist Subcollection
+      match /watchlist/{entryId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidWatchlist(incoming());
+        allow delete: if isOwner(userId);
+      }
+
+      // Private User Favourites Subcollection
+      match /favorites/{entryId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidFavorite(incoming());
+        allow delete: if isOwner(userId);
+      }
+
+      // Private User Search History Subcollection
+      match /searchHistory/{entryId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidSearch(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Public Community Reviews & Ratings
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidReview(incoming());
+      allow update: if (
+        (isSignedIn() && existing().userId == request.auth.uid && isValidReview(incoming())) ||
+        isAdmin()
+      );
+      allow delete: if (
+        (isSignedIn() && existing().userId == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Editorial News Articles
+    match /news/{articleId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Moderation Reports
+    match /reports/{reportId} {
+      allow read: if isAdmin() || (isSignedIn() && existing().reporterId == request.auth.uid);
+      allow create: if isSignedIn() && isValidReport(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    // Site Settings (e.g. Featured Hero Title Curation)
+    match /siteSettings/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin Audit Logs
+    match /adminAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() || isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}

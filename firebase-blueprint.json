@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with preference settings and identity reference",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 150 },
+        "avatar": { "type": "string", "maxLength": 500 },
+        "preferredGenres": { "type": "array" },
+        "notificationPreferences": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "displayName", "email", "createdAt"]
+    },
+    "WatchlistEntry": {
+      "title": "Watchlist Entry",
+      "description": "A saved movie or TV show in the user's private watchlist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "mediaId": { "type": "number" },
+        "mediaType": { "type": "string", "enum": ["movie", "tv"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "posterPath": { "type": "string", "maxLength": 500 },
+        "voteAverage": { "type": "number" },
+        "releaseDate": { "type": "string", "maxLength": 50 },
+        "genres": { "type": "array" },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["mediaId", "mediaType", "title", "addedAt"]
+    },
+    "FavoriteEntry": {
+      "title": "Favorite Entry",
+      "description": "A marked all-time favourite film or series",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "mediaId": { "type": "number" },
+        "mediaType": { "type": "string", "enum": ["movie", "tv"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "posterPath": { "type": "string", "maxLength": 500 },
+        "voteAverage": { "type": "number" },
+        "releaseDate": { "type": "string", "maxLength": 50 },
+        "genres": { "type": "array" },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["mediaId", "mediaType", "title", "addedAt"]
+    },
+    "SearchHistoryEntry": {
+      "title": "Search History Entry",
+      "description": "User recent discovery search queries",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "query": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["query", "createdAt"]
+    },
+    "Review": {
+      "title": "Community Review",
+      "description": "User critique and analytical score for a media title",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 100 },
+        "mediaId": { "type": "number" },
+        "mediaType": { "type": "string", "enum": ["movie", "tv"] },
+        "rating": { "type": "number" },
+        "reviewText": { "type": "string", "maxLength": 2000, "minLength": 5 },
+        "status": { "type": "string", "enum": ["published", "pending", "flagged"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "userName", "mediaId", "rating", "reviewText", "status", "createdAt"]
+    },
+    "Article": {
+      "title": "Editorial Article",
+      "description": "Longform cinema and television criticism or festival report",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "slug": { "type": "string", "maxLength": 200 },
+        "title": { "type": "string", "maxLength": 300 },
+        "excerpt": { "type": "string", "maxLength": 1000 },
+        "body": { "type": "string" },
+        "category": { "type": "string", "maxLength": 50 },
+        "image": { "type": "string", "maxLength": 500 },
+        "author": { "type": "string", "maxLength": 100 },
+        "authorRole": { "type": "string", "maxLength": 100 },
+        "readTime": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["published", "draft"] },
+        "publishedAt": { "type": "string" }
+      },
+      "required": ["slug", "title", "body", "category", "author", "status", "publishedAt"]
+    },
+    "Report": {
+      "title": "Content Report",
+      "description": "User-submitted report regarding objectionable content or policy violation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "reporterId": { "type": "string", "maxLength": 128 },
+        "targetType": { "type": "string", "enum": ["review", "article", "user"] },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "reason": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["pending", "resolved", "dismissed"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["reporterId", "targetType", "targetId", "reason", "status", "createdAt"]
+    },
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Platform settings including active featured hero spotlight",
+      "type": "object",
+      "properties": {
+        "featuredMediaId": { "type": "number" },
+        "announcement": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["featuredMediaId", "updatedAt"]
+    },
+    "AdminAuditLog": {
+      "title": "Admin Audit Log",
+      "description": "Immutable ledger of administrative actions for accountability",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "actor": { "type": "string", "maxLength": 150 },
+        "action": { "type": "string", "maxLength": 100 },
+        "targetType": { "type": "string", "maxLength": 50 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "actor", "action", "targetType", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile documents"
+    },
+    "/users/{userId}/watchlist/{entryId}": {
+      "schema": { "$ref": "#/entities/WatchlistEntry" },
+      "description": "Private user watchlist items"
+    },
+    "/users/{userId}/favorites/{entryId}": {
+      "schema": { "$ref": "#/entities/FavoriteEntry" },
+      "description": "Private user favourite items"
+    },
+    "/users/{userId}/searchHistory/{entryId}": {
+      "schema": { "$ref": "#/entities/SearchHistoryEntry" },
+      "description": "Private user discovery search history"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Public community reviews and ratings"
+    },
+    "/news/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Published editorial articles"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Content moderation reports"
+    },
+    "/siteSettings/{documentId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Global platform discovery settings and hero curation"
+    },
+    "/adminAuditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AdminAuditLog" },
+      "description": "Immutable administrative audit logs"
+    }
+  }
+}

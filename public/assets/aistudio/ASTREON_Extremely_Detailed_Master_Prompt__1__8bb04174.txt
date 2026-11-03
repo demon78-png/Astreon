@@ -1,0 +1,1216 @@
+ASTREON EXTREMELY DETAILED MASTER DEVELOPMENT PROMPT Implementation
+Specification, Product Requirements, Technical Architecture, UX System,
+Security Plan, QA Plan and Launch Runbook Version: 2.0 Project type:
+Premium entertainment discovery platform Target: Public, responsive
+website Development environment: Google AI Studio Build mode Preferred
+backend: Firebase Content metadata: The Movie Database (TMDB), subject
+to its terms and attribution requirements Brand tagline: DISCOVER BEYOND
+THE SCREEN.
+
+======================================================================
+0. MASTER INSTRUCTION — READ BEFORE BUILDING
+======================================================================
+
+You are acting as a complete senior product and engineering team. Your
+roles include: - Product strategist and requirements analyst - UX
+researcher and information architect - Brand and visual identity
+designer - Senior frontend engineer - Senior backend engineer - Firebase
+and Firestore architect - API integration engineer - Application
+security engineer - Accessibility specialist - SEO specialist - Test and
+quality assurance engineer - DevOps and deployment engineer
+
+Your mission is to build ASTREON as a real, working, production-minded
+entertainment discovery website. Do not deliver only a proposal, static
+design, clickable mockup, landing page, or collection of non-functional
+buttons.
+
+The user has selected: - Brand: ASTREON - Product: Entertainment
+discovery platform - Accounts: Free accounts at launch; optional premium
+capabilities may be introduced later - Visual direction: Minimalist
+premium - Development environment: Google AI Studio - Backend:
+Firebase - Database: Cloud Firestore - Authentication: Firebase
+Authentication - Entertainment metadata: TMDB API - Launch: Public
+website using a custom domain - Initial content model: Discover and
+learn about movies and TV shows, view authorized promotional trailers,
+read editorial content, save titles and follow legitimate viewing links.
+
+The product is NOT an unauthorized movie streaming service. Never
+scrape, host, proxy, download, reproduce or link to unauthorized copies
+of copyrighted films or television episodes. Do not imply that metadata,
+posters or trailer references grant distribution rights. Use only
+authorized embeds and legitimate external viewing links where available.
+
+CORE EXECUTION RULE: Inspect the actual Google AI Studio environment and
+project state before choosing implementation details. Use the framework
+and deployment architecture supported by the current environment. Do not
+blindly force incompatible frameworks or assume that a particular
+hosting path is available. Explain any necessary architecture adjustment
+while preserving the product requirements.
+
+Do not claim a service is connected, a feature is complete, a test
+passed, or a website is deployed unless that state has been verified. If
+access, credentials, billing approval, domain ownership or user
+authorization is required, clearly ask for it. Never fabricate
+credentials, test results, URLs, DNS records or deployment success.
+
+Build in small, verifiable stages. Preserve working code and
+functionality. Avoid destructive rewrites. Before making large
+structural changes, inspect the relevant files and explain the intended
+change.
+
+====================================================================== 1.
+PRODUCT VISION AND POSITIONING
+======================================================================
+
+1.1 Product definition
+
+ASTREON is a premium digital entertainment discovery platform that helps
+visitors: - Discover films and television series. - Explore popular,
+trending, highly rated and upcoming titles. - Search for titles, genres
+and supported people. - Read accurate entertainment metadata. - Explore
+cast, crew and related titles. - Find official trailers and promotional
+videos. - Follow legitimate viewing options where reliable links are
+available. - Create a free account. - Build a personal watchlist and
+favourites collection. - Record personal ratings and reviews. - Read
+ASTREON editorial news and features. - Receive relevant, controllable
+account notifications. - Discover titles through preference-aware
+recommendations.
+
+1.2 Positioning
+
+ASTREON should feel like a curated entertainment destination, not a
+clone of a streaming service. The value is discovery, context,
+personalization and editorial curation.
+
+The platform must clearly distinguish: - ASTREON-authored editorial
+material. - Third-party metadata supplied by TMDB. - User-generated
+reviews and ratings. - Official promotional video references. - External
+provider availability information, if any.
+
+Never present external data as ASTREON-owned or verified by ASTREON
+unless it has been independently verified.
+
+1.3 Audiences
+
+Design for a broad international audience, including: - Casual movie
+fans. - TV-series fans. - People looking for something new to watch. -
+Users who enjoy organizing watchlists. - Users who follow film and
+television news. - Visitors using low-cost mobile devices or slower
+connections.
+
+Do not assume every user has a high-end phone, large screen, unlimited
+data or fast internet.
+
+1.4 Product principles
+
+-   Discoverability over clutter.
+-   Accuracy over volume.
+-   Useful features over decorative interactions.
+-   Privacy by default.
+-   Mobile-first usability.
+-   Fast and resilient experiences.
+-   Clear content attribution.
+-   Honest handling of unavailable information.
+-   Maintainable, testable engineering.
+-   Progressive enhancement.
+
+======================================================================
+2. BRAND IDENTITY AND DESIGN SYSTEM
+======================================================================
+
+2.1 Brand
+
+Name: ASTREON Tagline: DISCOVER BEYOND THE SCREEN. Brand concept:
+Exploration, imagination, discovery, cinema and the wider universe of
+entertainment.
+
+Personality: - Minimalist - Premium - Cinematic - Intelligent - Calmly
+futuristic - Welcoming - Trustworthy - International
+
+Do not use childish, overly playful or excessively sci-fi styling. The
+interface should feel polished and timeless.
+
+2.2 Logo requirements
+
+Create an original brand mark. Explore an abstract star, orbit, horizon
+or cosmic geometry motif, but keep it simple enough to remain
+recognizable at small sizes.
+
+Required variants: - Primary horizontal logo. - Symbol-only logo. -
+Light-background logo. - Dark-background logo. - Favicon. - Social/share
+avatar where appropriate.
+
+Use vector artwork when possible. Ensure the logo is legible at mobile
+sizes. Do not use a third-party entertainment company logo or copy a
+protected logo.
+
+2.3 Color tokens
+
+Use the following starting palette and define them as reusable design
+tokens:
+
+-   Cosmic Black: #080A12
+-   Deep Space: #111421
+-   Elevated Surface: #191D2B
+-   Nebula Purple: #8B5CF6
+-   Stellar Blue: #38BDF8
+-   Starlight White: #F8FAFC
+-   Silver Grey: #A1A1AA
+-   Border: #272B3A
+-   Muted Text: #858B9B
+-   Success: accessible green selected by the design system
+-   Warning: accessible amber selected by the design system
+-   Error: accessible red selected by the design system
+
+The visual direction is minimalist premium. Use the accent colors
+selectively for links, focus states, selected controls and small
+highlights. Do not turn every button, border or card into a glowing
+gradient.
+
+2.4 Typography
+
+Preferred: - Space Grotesk for headings and brand-forward display
+text. - Inter for body text, controls and metadata.
+
+If a font cannot be loaded reliably, use an appropriate system fallback.
+Avoid layout shifts when fonts load.
+
+2.5 Layout and spacing
+
+Create a consistent spacing scale, for example: - 4px - 8px - 12px -
+16px - 24px - 32px - 48px - 64px - 80px
+
+Define consistent: - Content max-widths. - Page gutters. - Header
+heights. - Card radii. - Button heights. - Form spacing. - Grid gaps. -
+Modal widths. - Responsive breakpoints.
+
+2.6 Component states
+
+Every interactive component must have: - Default state. - Hover state
+where applicable. - Focus-visible state. - Active/pressed state. -
+Disabled state. - Loading state where relevant. - Error state where
+relevant. - Success feedback where relevant.
+
+2.7 Motion
+
+Use restrained, purposeful motion: - Short transitions for buttons and
+controls. - Subtle card hover elevation or image treatment. - Smooth but
+non-disorienting navigation transitions. - Loading skeletons. - Respect
+reduced-motion preferences.
+
+Do not use heavy parallax, excessive autoplay, flashing effects or
+animations that impair accessibility or performance.
+
+======================================================================
+3. INFORMATION ARCHITECTURE AND ROUTES
+======================================================================
+
+Build a coherent route structure. Adapt route syntax to the framework in
+the actual environment.
+
+Public routes: - / - /discover - /movies - /movies/[slug-or-id] - /tv -
+/tv/[slug-or-id] - /genres/[genre] - /trending - /popular - /top-rated -
+/upcoming - /trailers - /news - /news/[slug] - /search - /about -
+/contact - /help - /privacy - /terms - /content-attribution
+
+Authentication routes: - /login - /register - /forgot-password -
+/verify-email - /auth/callback if required by the selected provider
+
+Signed-in user routes: - /account - /account/profile -
+/account/preferences - /account/watchlist - /account/favorites -
+/account/reviews - /account/notifications - /account/privacy
+
+Administrative routes: - /admin - /admin/users - /admin/content -
+/admin/collections - /admin/news - /admin/reviews - /admin/reports -
+/admin/analytics - /admin/settings - /admin/audit-log
+
+Protect account and admin routes appropriately. Do not rely only on
+hiding navigation links. Enforce authorization at the server and
+database layers.
+
+Use human-readable URLs where practical. Avoid exposing sensitive
+information in URLs.
+
+======================================================================
+4. GLOBAL NAVIGATION AND SITE SHELL
+======================================================================
+
+Create a shared site shell with: - Brand logo. - Main navigation. -
+Discover entry point. - Movies. - TV Shows. - Trailers. - News. - Search
+control. - Sign-in or profile control. - Responsive mobile navigation.
+
+Desktop: - Compact, clear header. - Consistent active-route indicator. -
+Search should be easy to access. - Avoid overcrowding.
+
+Mobile: - Ensure navigation works on narrow screens. - Use an accessible
+menu or compact bottom navigation if appropriate. - Prevent menus from
+covering essential actions. - Support touch targets of comfortable
+size. - Close menus after navigation where appropriate. - Ensure
+keyboard and screen-reader behavior.
+
+Footer: - Brand and short description. - About. - Contact. - Help. -
+Privacy. - Terms. - Attribution. - Social links only when configured and
+verified. - Copyright statement.
+
+No dead links, fake buttons or decorative controls that look interactive
+but do nothing.
+
+======================================================================
+5. HOMEPAGE REQUIREMENTS
+======================================================================
+
+Create a premium, editorial-style homepage.
+
+5.1 Hero area
+
+Include: - Featured movie or series artwork. - Readable title. - Short
+synopsis. - Release year where available. - Genres where available. -
+Rating with source clearly identified. - Details action. - Trailer
+action only when a valid authorized trailer exists. - Optional editorial
+label such as “Featured” or “Staff Pick” when configured.
+
+Use a readable image overlay. Ensure text remains legible on different
+artwork.
+
+The featured item must be configurable from the admin interface or a
+controlled content configuration. Do not hardcode a permanent title as
+the only option.
+
+5.2 Homepage content rails
+
+Create reusable sections for: - Trending Now. - Popular Movies. -
+Popular TV Shows. - Top Rated. - Upcoming Releases. - Recommended For
+You. - Recently Added to ASTREON. - Latest Trailers. - Latest
+Entertainment News.
+
+Only show a section when data is available. Avoid empty, broken or fake
+sections.
+
+5.3 Visitor and signed-in experiences
+
+Visitors: - Show broadly popular and editorially curated content. -
+Provide a clear sign-in invitation without blocking discovery.
+
+Signed-in users: - Show personalized recommendations when enough
+preference data exists. - Show shortcuts to their watchlist and
+favourites. - Do not expose private account data in public pages.
+
+5.4 Homepage loading
+
+Use skeleton placeholders that resemble the final layout. Avoid a blank
+page while data loads.
+
+5.5 Empty and error states
+
+If a data source is unavailable: - Keep the rest of the page usable. -
+Show a discreet, helpful message. - Provide retry where appropriate. -
+Do not fabricate fallback titles or ratings.
+
+======================================================================
+6. MOVIE DISCOVERY
+======================================================================
+
+Create a full movie browsing experience.
+
+Required views: - Trending. - Popular. - Top rated. - Upcoming. - Now
+playing where supported by source data. - Genre collections. - Search
+results.
+
+Filters: - Genre. - Release year or year range. - Original language
+where available. - Rating range where supported. - Sort order. -
+Availability only if a trustworthy provider data source is integrated
+and its limitations are disclosed.
+
+Requirements: - Combine filters correctly. - Keep filter state in URL
+query parameters where appropriate. - Support clearing filters. -
+Support pagination or incremental loading. - Preserve useful scroll
+position when navigating back if feasible. - Show result count only when
+accurate. - Avoid requesting every record at once.
+
+Movie card: - Poster image. - Title. - Year. - Source rating if
+present. - Optional genre label. - Accessible link to details. -
+Watchlist action for signed-in users. - Favourite action for signed-in
+users.
+
+Do not make an entire card inaccessible by nesting multiple buttons
+inside one link. Use valid semantic interaction patterns.
+
+======================================================================
+7. TV SHOW DISCOVERY
+======================================================================
+
+Create a dedicated TV discovery system.
+
+Views: - Trending shows. - Popular shows. - Top-rated shows. - Currently
+airing or on-air sections where source data supports them. - Upcoming or
+returning shows only when data supports that interpretation. - Genre
+collections.
+
+TV detail page: - Title. - Overview. - Poster and backdrop. - Genres. -
+First air date. - Last air date where available. - Number of seasons
+where available. - Episode runtime where available. - Cast and crew. -
+Season and episode information when requested. - Similar titles. -
+Official trailer references.
+
+Do not assume that all seasons or episode details are present. Handle
+missing data without broken UI.
+
+======================================================================
+8. TITLE DETAIL PAGES
+======================================================================
+
+Use reusable detail templates for movies and TV shows.
+
+Include: - Hero backdrop. - Poster. - Title. - Overview. - Release date
+or first air date. - Genres. - Runtime or episode details where
+available. - Source rating and vote count where available. - Cast. -
+Crew. - Production information where available. - Official trailers and
+clips. - Similar titles. - User watchlist action. - User favourite
+action. - User review area. - External viewing links only when
+legitimately sourced.
+
+Do not infer missing facts. Hide unavailable fields or display
+“Information unavailable” where useful.
+
+Avoid displaying third-party source ratings as ASTREON user ratings.
+Label each rating source.
+
+======================================================================
+9. SEARCH AND DISCOVERY
+======================================================================
+
+Build a reliable search system.
+
+Search targets: - Movies. - TV shows. - People, if supported by the
+metadata provider. - ASTREON news articles. - Curated collections.
+
+Search behavior: - Debounce keystrokes. - Cancel or disregard stale
+requests. - Show loading feedback. - Provide suggestions only when
+useful. - Support keyboard navigation. - Support clear search. - Show
+recent searches only with suitable consent and retention controls. -
+Allow users to remove search history. - Provide useful no-results
+guidance.
+
+Search filters: - Content type. - Genre. - Year. - Language. - Sort
+order.
+
+Do not save every search indefinitely. Minimize stored data and define
+retention behavior.
+
+======================================================================
+10. AUTHENTICATION AND ACCOUNT LIFECYCLE
+======================================================================
+
+Use Firebase Authentication.
+
+At launch, support: - Email and password. - Google sign-in if configured
+and available in the chosen environment.
+
+Implement: - Registration. - Login. - Logout. - Email verification. -
+Password reset. - Session persistence. - Auth state loading. - Protected
+account routes. - Account deletion. - Clear authentication error
+messages.
+
+Security requirements: - Never store plaintext passwords. - Never
+implement custom password storage. - Do not trust a user-provided
+role. - Do not store sensitive tokens in unsafe browser storage. - Use
+official Firebase SDK patterns. - Handle expired or revoked sessions. -
+Ensure sign-out clears sensitive client state.
+
+Account registration: - Validate email format. - Enforce appropriate
+password requirements through the provider. - Explain verification
+requirements. - Prevent accidental duplicate profile creation. - Do not
+collect unnecessary personal information.
+
+Google sign-in: - Configure authorized domains and provider settings. -
+Handle cancelled sign-in. - Handle provider errors. - Do not claim it
+works until tested in the configured environment.
+
+======================================================================
+11. USER PROFILE AND PREFERENCES
+======================================================================
+
+Profile fields: - User ID. - Display name. - Email reference from
+authentication. - Profile image URL if provided. - Preferred genres. -
+Preferred content types. - Locale or language preference if offered. -
+Notification preferences. - Created timestamp. - Updated timestamp.
+
+Do not make private email addresses public.
+
+Users may: - Update permitted profile fields. - Select favourite
+genres. - Set recommendation preferences. - Change notification
+settings. - Review their account data. - Request account deletion.
+
+Validate all user-controlled input on the server or trusted service
+layer.
+
+======================================================================
+12. WATCHLIST AND FAVOURITES
+======================================================================
+
+Create persistent, private collections.
+
+Watchlist: - Add a movie. - Remove a movie. - Add a TV show. - Remove a
+TV show. - Browse saved items. - Sort by date added or title where
+practical. - Show useful empty state. - Prevent duplicate entries.
+
+Favourites: - Add and remove favourites. - Browse favourite movies and
+shows. - Keep the list separate from watchlist semantics.
+
+Persistence: - Store records in Firestore. - Associate each record with
+the authenticated user ID. - Enforce ownership through security rules. -
+Handle offline or retry states where supported. - Avoid optimistic UI
+updates that silently become inconsistent after failed writes.
+
+Do not allow a user to read or modify another user’s private
+collections.
+
+======================================================================
+13. USER RATINGS, REVIEWS AND REPORTS
+======================================================================
+
+Implement a safe, moderated review system.
+
+Review fields: - Review ID. - User ID. - Media ID. - Media type. -
+Rating. - Review text. - Status. - Created timestamp. - Updated
+timestamp.
+
+Rules: - Define a consistent rating scale. - Validate rating values on
+the trusted backend. - Set a reasonable maximum review length. - Prevent
+duplicate active reviews by the same user for the same title unless
+editing the existing review. - Permit users to edit or delete their own
+reviews. - Do not permit users to edit another user’s review. - Provide
+report functionality. - Moderate content that violates platform rules. -
+Keep a moderation history for administrative accountability.
+
+Display: - Review text. - Display name or permitted public profile
+identity. - Date. - Rating. - Helpful or reporting controls only if
+implemented securely.
+
+Do not fabricate review counts, user names, review text or aggregate
+user ratings.
+
+Separate TMDB ratings from ASTREON community ratings.
+
+======================================================================
+14. TRAILERS AND EXTERNAL VIEWING LINKS
+======================================================================
+
+ASTREON is a discovery product.
+
+Permitted functionality: - Display official trailer metadata. - Embed
+authorized promotional videos where provider terms allow. - Link to
+official studio, distributor or authorized platform pages. - Display a
+source label. - Open external links safely.
+
+Never: - Host unauthorized copies. - Scrape illegal streaming sites. -
+Provide download links to copyrighted films without permission. - Bypass
+access controls. - Circumvent DRM. - Misrepresent a trailer as a full
+movie. - Claim a title is available on a platform without reliable
+current data.
+
+If no verified trailer exists, omit the trailer button or show a clear
+unavailable state.
+
+Use safe external link behavior and avoid exposing users to misleading
+links.
+
+======================================================================
+15. ENTERTAINMENT NEWS AND EDITORIAL CMS
+======================================================================
+
+Create an original editorial area.
+
+News features: - News landing page. - Article detail page. - Category
+navigation. - Featured article. - Related articles. - Search. -
+Publication date. - Author display. - Social sharing metadata.
+
+Editorial CMS: - Create draft. - Edit draft. - Preview. - Publish. -
+Unpublish. - Schedule publication if reliably supported. - Archive. -
+Delete with confirmation. - Manage categories. - Upload or select
+appropriately licensed images.
+
+Article fields: - Title. - Slug. - Summary. - Body. - Featured image. -
+Image alt text. - Category. - Author ID. - Status. - Created
+timestamp. - Updated timestamp. - Published timestamp.
+
+Use original content or material the publisher has permission to use. Do
+not republish full copyrighted articles from other publishers.
+
+Sanitize rich text or HTML. Prevent stored cross-site scripting.
+
+======================================================================
+16. RECOMMENDATION ENGINE
+======================================================================
+
+Start with a transparent, rule-based recommendation system.
+
+Possible inputs: - Preferred genres. - Favourite titles. - Watchlist
+titles. - Explicit user feedback. - Previously viewed detail pages only
+if collection is disclosed and appropriately minimized. - Popularity. -
+Source ratings. - Similar-title metadata.
+
+Requirements: - New users receive general recommendations. - Users can
+adjust or clear preferences. - Avoid presenting recommendations as
+objective facts. - Explain recommendation signals in simple language
+where useful. - Do not infer sensitive traits. - Do not create a hidden
+profile of sensitive personal characteristics. - Do not claim machine
+learning unless a real model is implemented and evaluated.
+
+The recommendation system must fail gracefully if interaction history is
+unavailable.
+
+======================================================================
+17. NOTIFICATIONS
+======================================================================
+
+Create a notification foundation.
+
+Potential notification types: - Account security or account activity. -
+New content in selected genres. - Upcoming releases. - Review replies or
+moderation outcomes if such features exist. - Editorial announcements.
+
+Requirements: - User preferences. - Read/unread state. - Mark as read. -
+Mark all as read if supported. - Avoid duplicate notifications. - Avoid
+unnecessary notification frequency. - Respect consent and browser
+notification permissions.
+
+Do not request browser notification permission immediately on first page
+load. Explain the value and ask at an appropriate moment.
+
+======================================================================
+18. ADMINISTRATION AND ROLE-BASED ACCESS
+======================================================================
+
+Create a private administrative area.
+
+Roles: - Visitor. - Registered user. - Moderator, if needed. -
+Administrator.
+
+Define permissions explicitly.
+
+Admin dashboard: - Overview metrics. - User management. - Content
+curation. - Featured title management. - News management. - Review
+moderation. - Reports. - Site configuration. - Audit log.
+
+Important: - Administrator privileges must be assigned through trusted
+administrative procedures. - Use Firebase custom claims or another
+trusted server-side authorization mechanism where suitable. - Never
+allow users to assign their own admin role. - Never trust a role value
+from an untrusted client. - Protect API endpoints, database documents
+and server actions. - Hiding an admin link is not authorization.
+
+User management: - Search and view permitted account information. -
+Suspend or restrict accounts only through authorized, audited
+operations. - Avoid exposing credentials or private user content
+unnecessarily. - Require confirmation for destructive actions.
+
+Content management: - Configure homepage features. - Create curated
+collections. - Publish original news. - Moderate reviews. - Manage
+reports.
+
+Audit log: - Actor ID. - Action. - Target type. - Target ID. -
+Timestamp. - Relevant non-sensitive metadata.
+
+Do not log passwords, authentication tokens, API secrets or unnecessary
+personal data.
+
+======================================================================
+19. FIREBASE AND DATA ARCHITECTURE
+======================================================================
+
+Use Cloud Firestore as the primary application database.
+
+Design the schema around access patterns and security, not just a list
+of collections.
+
+Suggested collections:
+
+users/{uid} - displayName - photoURL - preferredGenres -
+preferredContentTypes - notificationPreferences - createdAt -
+updatedAt - publicProfileSettings
+
+users/{uid}/watchlist/{entryId} - mediaId - mediaType - titleSnapshot
+only if justified - posterPath only if justified - addedAt
+
+users/{uid}/favorites/{entryId} - mediaId - mediaType - createdAt
+
+users/{uid}/searchHistory/{entryId} - query - createdAt - optional
+expiration metadata
+
+reviews/{reviewId} - userId - mediaId - mediaType - rating -
+reviewText - status - createdAt - updatedAt
+
+news/{articleId} - title - slug - excerpt - body - image - imageAlt -
+categoryId - authorId - status - publishedAt - createdAt - updatedAt
+
+reports/{reportId} - reporterId - targetType - targetId - reason -
+status - createdAt - resolvedAt - resolvedBy
+
+siteSettings/{documentId} - public settings only - featured media
+references - announcement configuration - updatedAt
+
+adminAuditLogs/{logId} - actorId - action - targetType - targetId -
+timestamp - safe metadata
+
+notifications/{notificationId} - userId - title - message - type -
+readAt - createdAt
+
+Avoid storing a complete copy of third-party metadata unless there is a
+clear caching or product requirement and the provider terms permit it.
+
+Use stable identifiers and document ownership rules.
+
+Use server timestamps for authoritative timestamps.
+
+Avoid unbounded arrays that grow indefinitely.
+
+Create and document Firestore composite indexes needed by real queries.
+
+Use pagination for large collections.
+
+Define retention and deletion behavior.
+
+======================================================================
+20. FIRESTORE SECURITY RULES
+======================================================================
+
+Write restrictive production rules.
+
+Requirements: - Public users can read only intended public content. -
+Authenticated users can read and write only their own private profile
+and subcollections. - Users cannot modify protected role or account
+status fields. - Users can create or update only their own reviews under
+defined validation rules. - Users cannot modify moderation status. -
+Only authorized admins can manage site settings and editorial content. -
+Reports are private to the reporter and authorized moderators. - Audit
+logs are not client-writable. - Notifications are readable only by the
+intended user and writable through trusted services where appropriate.
+
+Validate: - Authentication state. - User ownership. - Field
+allowlists. - Field types. - String length. - Numeric bounds. -
+Immutable fields. - Allowed status transitions.
+
+Never deploy permissive test rules.
+
+Provide rule tests covering: - Anonymous access. - Normal user access. -
+Cross-user access attempts. - Admin access. - Attempts to self-promote
+to admin. - Attempts to modify protected fields. - Invalid review
+submissions.
+
+======================================================================
+21. TMDB INTEGRATION
+======================================================================
+
+Use the official TMDB developer documentation.
+
+Integrate supported endpoints for: - Movie discovery. - Movie search. -
+Movie details. - Movie credits. - Similar movies. - Trending movies. -
+Popular movies. - Top-rated movies. - Upcoming movies. - TV discovery. -
+TV search. - TV details. - TV credits. - Season and episode information
+where available. - Genre lists. - Person search and details where
+appropriate. - Image paths. - Video metadata.
+
+Create a typed service layer.
+
+Requirements: - API key stored securely on server side. - No secret in
+client bundle. - Input validation. - Timeout handling. - Retry only when
+appropriate. - Rate-conscious requests. - Caching. - Pagination. - Error
+mapping. - Graceful fallback. - Provider attribution.
+
+Do not assume that all endpoints, fields or video references are always
+available.
+
+Use the current API documentation, not outdated examples.
+
+TMDB attribution: - Follow current TMDB branding and attribution
+requirements. - Include required attribution language and logo where
+required. - Clearly identify third-party data. - Do not imply TMDB
+endorsement. - Review current commercial-use terms before monetizing
+ASTREON.
+
+======================================================================
+22. API DESIGN AND SERVER-SIDE VALIDATION
+======================================================================
+
+Create clear application service boundaries.
+
+Potential server endpoints or equivalent server actions: - GET movie
+discovery. - GET movie details. - GET TV discovery. - GET TV details. -
+GET search. - POST review. - PATCH own review. - DELETE own review. -
+POST report. - GET account collections. - POST watchlist entry. - DELETE
+watchlist entry. - POST favourite entry. - DELETE favourite entry. -
+Admin content operations. - Admin moderation operations.
+
+Do not expose privileged operations to unauthenticated users.
+
+Validate every incoming request: - Method. - Authentication. -
+Authorization. - Content type. - Payload schema. - String lengths. -
+Numeric ranges. - Identifier formats. - Rate limits where appropriate.
+
+Return consistent error responses without leaking stack traces or
+secrets.
+
+======================================================================
+23. RESPONSIVE DESIGN AND MOBILE-FIRST ENGINEERING
+======================================================================
+
+The website must work well on: - Small Android devices. - Large Android
+devices. - iPhone sizes. - Tablets. - Laptops. - Desktop monitors.
+
+Design for narrow screens first.
+
+Test: - 320px width. - 360px width. - 375px width. - 390px width. -
+414px width. - Tablet widths. - 1366px desktop. - 1440px desktop. -
+Large desktop.
+
+Requirements: - No horizontal overflow. - No clipped text. - No
+overlapping buttons. - Readable card metadata. - Touch-friendly
+controls. - Proper image ratios. - Responsive grids. - Accessible mobile
+menus. - Forms usable with mobile keyboards. - Modals fit small
+viewports. - Sticky elements do not obscure content.
+
+Test on an actual Android browser if possible, not only an emulator.
+
+======================================================================
+24. ACCESSIBILITY
+======================================================================
+
+Aim for WCAG 2.2 AA.
+
+Requirements: - Semantic HTML. - Correct heading hierarchy. - Keyboard
+access. - Visible focus styles. - Descriptive labels. - Accessible form
+errors. - Alternative text for meaningful images. - Empty alt text for
+decorative images. - Sufficient color contrast. - Reduced motion
+support. - Accessible dialogs. - Screen-reader-friendly status
+messages. - No keyboard traps. - Do not rely on color alone.
+
+Ensure carousels and horizontal content rails can be operated with
+keyboard and touch.
+
+======================================================================
+25. PERFORMANCE AND RESILIENCE
+======================================================================
+
+Optimize for users on mobile networks and lower-powered devices.
+
+Requirements: - Lazy load offscreen images. - Use responsive image
+sizes. - Avoid oversized image downloads. - Optimize fonts. - Minimize
+JavaScript. - Split code by route where appropriate. - Cache safe public
+metadata. - Avoid repeated API requests. - Debounce search. - Paginate
+results. - Use skeletons. - Avoid layout shifts. - Handle slow network
+conditions. - Provide retry states. - Keep the homepage useful if one
+section fails.
+
+Do not cache private account data in shared public caches.
+
+Do not cache sensitive responses across users.
+
+Use appropriate cache-control policies.
+
+======================================================================
+26. SEO AND SHARING
+======================================================================
+
+Implement: - Unique page titles. - Meta descriptions. - Canonical
+URLs. - Open Graph metadata. - Social share images. - Sitemap. -
+Robots.txt. - Structured data where accurate and appropriate. - Clean
+URL slugs. - Descriptive image alt text.
+
+Do not index: - Admin pages. - Private account pages. - Sensitive
+user-specific pages. - Authentication callback pages. - Duplicate search
+parameter pages where inappropriate.
+
+Do not invent ratings, availability, release dates or structured data
+values.
+
+======================================================================
+27. PRIVACY, TRUST AND LEGAL PAGES
+======================================================================
+
+Prepare: - Privacy Policy. - Terms of Service. - Cookie information
+where applicable. - About. - Contact. - Help. - Content attribution.
+
+Explain: - What account information is collected. - Why information is
+used. - What third-party services are involved. - How cookies and
+analytics work. - Data retention. - Account deletion. - User-generated
+content rules. - Contact method for privacy questions.
+
+Do not claim legal compliance without review. These pages are drafts
+until reviewed against applicable laws and the actual operating model.
+
+Use data minimization. Do not collect sensitive personal information
+unless necessary and properly justified.
+
+======================================================================
+28. ANALYTICS AND OBSERVABILITY
+======================================================================
+
+If analytics are enabled: - Select a privacy-conscious analytics
+approach. - Obtain any required consent. - Avoid collecting sensitive
+information. - Do not send email addresses or private review content as
+analytics events. - Document events and retention. - Provide a way to
+disable non-essential analytics where required.
+
+Useful aggregated events may include: - Page view. - Search performed. -
+Title detail opened. - Watchlist action. - Favourite action. - Trailer
+link opened. - News article opened.
+
+Do not fabricate visitor counts or engagement metrics.
+
+Add error monitoring only after configuring the service and reviewing
+its data collection settings.
+
+======================================================================
+29. TESTING STRATEGY
+======================================================================
+
+Use a testing pyramid.
+
+Unit tests: - Formatting utilities. - Input validation. - Recommendation
+logic. - Data mapping. - Permission helper logic.
+
+Integration tests: - Firebase service integration. - TMDB service
+mapping. - Search and pagination. - Watchlist persistence. - Review
+lifecycle. - Admin authorization.
+
+End-to-end tests: - Visitor homepage journey. - Browse movies. - Browse
+TV shows. - Search and filters. - Register. - Verify email where
+testable. - Sign in. - Reset password where testable. - Add and remove
+watchlist items. - Add and remove favourites. - Submit and edit
+review. - Report review. - Admin sign-in. - Unauthorized admin
+rejection. - Publish news. - Mobile navigation.
+
+Security tests: - Anonymous write attempts. - Cross-user reads. -
+Cross-user writes. - Self-admin escalation. - Invalid payloads. - API
+secret exposure. - Unsafe HTML injection. - Rate-limit behavior.
+
+Responsive tests: - Small phone. - Large phone. - Tablet. - Desktop.
+
+Performance checks: - Image loading. - Initial page load. - Search
+request volume. - Unnecessary rerenders. - Console errors. - Network
+errors.
+
+Never mark a test as passed without executing it. Report tests that
+could not be run and explain why.
+
+======================================================================
+30. ERROR AND EMPTY-STATE DESIGN
+======================================================================
+
+Every major page must have: - Loading state. - Empty state. - Error
+state. - Retry behavior where appropriate.
+
+Examples: - No search results. - No watchlist entries. - No
+favourites. - No reviews. - No trailers. - No upcoming releases. - API
+unavailable. - Authentication expired. - Permission denied. - Network
+unavailable.
+
+Use concise, human-friendly language. Do not display raw stack traces or
+internal service secrets.
+
+======================================================================
+31. DEPLOYMENT ARCHITECTURE
+======================================================================
+
+Use the hosting option supported by the actual project framework.
+
+Potential path: - Google AI Studio Build mode for development. - GitHub
+for source control. - Firebase for authentication and database. -
+Firebase App Hosting for compatible Next.js deployments. - Google Cloud
+Run for a supported containerized deployment path. - Custom domain
+configured through the selected hosting provider.
+
+Do not assume every deployment option is interchangeable.
+
+Before production: - Verify framework compatibility. - Verify build
+command. - Verify runtime configuration. - Verify environment
+variables. - Verify Firebase authorized domains. - Verify API secrets. -
+Verify Firestore rules. - Verify indexes. - Verify HTTPS. - Verify
+domain ownership. - Verify billing and quotas. - Verify backup and
+recovery plan.
+
+Never invent DNS records. Use the exact records shown by the hosting
+provider.
+
+Do not state that the domain is live until DNS and HTTPS have been
+verified.
+
+======================================================================
+32. ENVIRONMENT VARIABLES AND SECRET MANAGEMENT
+======================================================================
+
+Create an .env.example containing variable names and safe placeholders
+only.
+
+Possible variables, adapted to actual implementation: - TMDB_API_KEY -
+Firebase public configuration values required by the selected SDK. -
+Server-side Firebase Admin credentials or workload identity
+configuration. - Application base URL. - Any configured analytics
+identifier.
+
+Distinguish public Firebase configuration from privileged secrets.
+Firebase client configuration is not a substitute for database security
+rules.
+
+Never commit: - Private API secrets. - Service account private keys. -
+Authentication tokens. - Production credentials. - User data exports.
+
+Use the hosting platform’s secret manager or supported environment
+configuration.
+
+======================================================================
+33. BACKUPS, MAINTENANCE AND OPERATIONS
+======================================================================
+
+Document: - Firestore backup strategy. - Recovery process. - Dependency
+update process. - API key rotation process. - Admin account recovery
+process. - Error monitoring. - Incident response contact. - Content
+moderation workflow. - Data deletion workflow.
+
+Do not assume backups exist until configured and verified.
+
+Avoid destructive database migrations. Document schema changes and
+migration steps.
+
+======================================================================
+34. PROJECT ORGANIZATION
+======================================================================
+
+Use a clean, maintainable structure appropriate to the framework.
+
+Suggested conceptual organization:
+
+ASTREON/ public/ branding/ icons/ images/ src/ app/ components/
+features/ authentication/ discovery/ movies/ television/ search/
+watchlist/ favorites/ reviews/ news/ recommendations/ administration/
+services/ firebase/ tmdb/ analytics/ hooks/ types/ schemas/ utils/
+styles/ functions/ tests/ documentation/ firestore.rules
+firestore.indexes.json .env.example README.md
+
+Adapt this to the actual project. Do not create empty files or
+unnecessary abstractions simply to match the diagram.
+
+Use: - Shared types. - Runtime validation schemas. - Reusable UI
+components. - Feature-based organization. - Clear service boundaries. -
+Consistent naming. - Small, focused modules.
+
+======================================================================
+35. DEVELOPMENT PHASES AND ACCEPTANCE CRITERIA
+======================================================================
+
+PHASE 0 — ENVIRONMENT INSPECTION AND PLAN
+
+Tasks: - Inspect Google AI Studio environment. - Determine framework and
+runtime. - Identify supported deployment options. - Identify required
+external services. - Create implementation checklist. - Identify
+credentials and permissions needed.
+
+Acceptance: - Architecture decision documented. - No unsupported
+framework assumptions. - No secrets requested in public chat or
+committed to source.
+
+PHASE 1 — BRAND AND DESIGN FOUNDATION
+
+Tasks: - Create ASTREON logo assets. - Define design tokens. - Build
+typography system. - Build global layout. - Build navigation. - Build
+footer. - Build responsive homepage structure.
+
+Acceptance: - Brand is consistent. - Navigation works. - Responsive
+layout passes initial viewport checks. - No dead controls. - No major
+console errors.
+
+PHASE 2 — TMDB DISCOVERY
+
+Tasks: - Configure server-side TMDB integration. - Build movie
+catalogue. - Build TV catalogue. - Build detail pages. - Build search. -
+Build filters. - Build pagination and caching.
+
+Acceptance: - Data is real and correctly mapped. - Missing data is
+handled. - API key is not exposed. - Search and filters work. - Errors
+do not break the whole page.
+
+PHASE 3 — FIREBASE ACCOUNTS
+
+Tasks: - Configure Firebase. - Implement authentication. - Create user
+profile documents. - Build account pages. - Build preferences.
+
+Acceptance: - Registration and login work in configured environment. -
+Session behavior is correct. - Account data is protected. - Password
+recovery is configured and tested where possible.
+
+PHASE 4 — PERSONAL COLLECTIONS
+
+Tasks: - Watchlist. - Favourites. - Persistent storage. - Duplicate
+prevention. - Empty states.
+
+Acceptance: - Data persists across sessions. - Users cannot access other
+users’ collections. - Failed writes are handled honestly.
+
+PHASE 5 — REVIEWS AND NEWS
+
+Tasks: - Ratings and reviews. - Review reporting. - Moderation. - News
+CMS. - Public article pages.
+
+Acceptance: - Users can edit only their own reviews. - Moderation
+permissions are enforced. - News content is validated and sanitized. -
+No fabricated review metrics.
+
+PHASE 6 — ADMINISTRATION
+
+Tasks: - Protected admin entry. - Role-based authorization. -
+Dashboard. - Content curation. - News management. - User management. -
+Reports and audit log.
+
+Acceptance: - Unauthorized users are rejected server-side. - Admin
+privileges cannot be self-assigned. - Destructive operations require
+confirmation. - Administrative actions are auditable.
+
+PHASE 7 — RECOMMENDATIONS AND NOTIFICATIONS
+
+Tasks: - Rule-based recommendations. - Preference controls. -
+Notification preferences. - Notification center.
+
+Acceptance: - New users receive general recommendations. - Preferences
+can be changed. - Notifications respect user settings.
+
+PHASE 8 — HARDENING AND QUALITY
+
+Tasks: - Accessibility audit. - Security rules tests. - Responsive
+tests. - Performance optimization. - SEO. - Privacy review. - Error
+monitoring.
+
+Acceptance: - Critical security tests pass. - Main journeys work. - No
+known critical defects. - Outstanding limitations are documented.
+
+PHASE 9 — PRODUCTION LAUNCH
+
+Tasks: - Production configuration. - GitHub source control. - Hosting
+deployment. - Custom domain. - HTTPS. - Smoke tests. - Monitoring. -
+Documentation.
+
+Acceptance: - Public site is reachable. - HTTPS works. - Authentication
+domain settings are correct. - Database rules are production-safe. - API
+secrets are configured securely. - Main user journeys work on the live
+deployment.
+
+======================================================================
+36. RELEASE READINESS CHECKLIST
+======================================================================
+
+Before public launch, verify each item:
+
+[ ] ASTREON branding is consistent. [ ] Homepage works. [ ] Navigation
+works. [ ] Movie discovery works. [ ] TV discovery works. [ ] Search
+works. [ ] Filters work. [ ] Detail pages work. [ ] Trailer links are
+legitimate. [ ] Registration works. [ ] Login works. [ ] Logout works. [
+] Password recovery is configured. [ ] Profiles work. [ ] Watchlists
+persist. [ ] Favourites persist. [ ] Reviews are validated. [ ] Reports
+can be submitted. [ ] Admin routes are protected. [ ] Admin operations
+are authorized. [ ] Firestore rules are tested. [ ] API secrets are
+protected. [ ] Mobile layouts work. [ ] Accessibility basics are tested.
+[ ] SEO metadata is present. [ ] Privacy and terms pages are published.
+[ ] TMDB attribution is correct. [ ] Error states are useful. [ ] No
+major console errors remain. [ ] Production environment variables are
+configured. [ ] HTTPS works. [ ] Custom domain is verified. [ ] Backup
+strategy is documented. [ ] Deployment instructions are documented.
+
+A checklist item must remain unchecked if it has not been verified.
+
+======================================================================
+37. REQUIRED DELIVERABLES
+======================================================================
+
+Deliver: 1. Working ASTREON website source code. 2. Original logo and
+brand assets. 3. Design system. 4. Responsive pages. 5. Movie discovery.
+6. TV discovery. 7. Search and filtering. 8. TMDB integration. 9.
+Firebase authentication. 10. User profiles. 11. Watchlists. 12.
+Favourites. 13. Reviews and reporting. 14. Editorial news system. 15.
+Admin dashboard. 16. Firestore schema and rules. 17. Required indexes.
+18. Server-side validation. 19. SEO implementation. 20. Accessibility
+improvements. 21. Automated tests. 22. .env.example. 23. README. 24.
+Setup guide. 25. Deployment guide. 26. Custom-domain instructions. 27.
+Known limitations report. 28. Release-readiness report.
+
+======================================================================
+38. HOW TO WORK WITH THE USER
+======================================================================
+
+Communicate clearly and concisely.
+
+At the start: - Inspect the project. - Explain the architecture. -
+Identify required setup actions. - Begin Phase 1 after resolving
+essential blockers.
+
+During development: - Work on one coherent milestone at a time. -
+Inspect files before editing. - Preserve existing working features. -
+Run relevant checks after changes. - Report exact files changed. -
+Report real test outcomes. - Ask for authorization before paid services
+or irreversible changes. - Do not repeatedly ask questions already
+answered in this specification.
+
+If a required credential is missing: - Build the integration boundary. -
+Add an example environment variable. - Explain where the user should
+configure the secret. - Do not invent a credential. - Continue with
+unrelated work where possible.
+
+If a tool or framework limitation prevents an exact requirement: -
+Explain the limitation. - Offer the closest safe supported
+implementation. - Do not silently omit the requirement.
+
+At the end of every phase, report: - Completed work. - Files created or
+changed. - Tests run. - Test results. - Remaining tasks. - User action
+required.
+
+======================================================================
+39. FINAL QUALITY STANDARD
+======================================================================
+
+ASTREON must not look or behave like a generic generated template.
+
+The finished product should have: - A distinct identity. - Elegant,
+minimalist premium design. - Accurate entertainment information. -
+Useful discovery experiences. - Reliable account functionality. - Secure
+personal collections. - Proper moderation. - A trustworthy editorial
+experience. - Fast mobile performance. - Accessible interactions. -
+Maintainable code. - Production-conscious infrastructure.
+
+Do not prioritize the number of features over their quality.
+
+Do not add features that are only decorative.
+
+Do not claim completion when the implementation is incomplete.
+
+The platform should be extensible without requiring a complete rewrite
+when future features are introduced.
+
+======================================================================
+40. FINAL EXECUTION COMMAND
+======================================================================
+
+Begin ASTREON development now.
+
+First inspect the available Google AI Studio project environment and
+determine the supported framework, runtime and deployment options.
+
+Then produce a concise architecture and setup report.
+
+After that, begin Phase 1 and implement the real application foundation,
+brand assets, design system, navigation and responsive homepage.
+
+Continue phase by phase, verifying each milestone before proceeding.
+
+Do not stop after generating a plan, a static homepage or a mockup.
+
+Build the real ASTREON application.
+
+PROJECT: ASTREON TAGLINE: DISCOVER BEYOND THE SCREEN. PRODUCT: PREMIUM
+ENTERTAINMENT DISCOVERY PLATFORM DESIGN: MINIMALIST PREMIUM ACCOUNTS:
+FREE AT LAUNCH; PREMIUM FEATURES MAY BE ADDED LATER DEVELOPMENT
+ENVIRONMENT: GOOGLE AI STUDIO BACKEND: FIREBASE DATABASE: CLOUD
+FIRESTORE AUTHENTICATION: FIREBASE AUTHENTICATION METADATA: TMDB API,
+SUBJECT TO CURRENT TERMS AND ATTRIBUTION LAUNCH: PUBLIC WEBSITE WITH A
+CUSTOM DOMAIN
+
+BEGIN DEVELOPMENT.
+Read and follow the complete ASTREON master specification I provided. First inspect the existing project, then create a structured implementation plan. Begin building the actual website in phases, starting with the responsive homepage, navigation, premium minimalist design system, and movie/TV discovery experience. Preserve existing project files and working features. Do not use fake functionality or claim anything is complete unless it works. Start now.
