@@ -2,7 +2,90 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <script>
+      (function() {
+        // Permanently satisfy and suppress Vite HMR WebSocket in AI Studio preview & Cloud Run
+        var OriginalWebSocket = window.WebSocket;
+        if (OriginalWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            var protoStr = Array.isArray(protocols) ? protocols.join(',') : String(protocols || '');
+            if (protoStr.indexOf('vite') !== -1 || (typeof url === 'string' && url.indexOf('vite') !== -1)) {
+              var listeners = {};
+              var dummy = {
+                binaryType: 'blob',
+                bufferedAmount: 0,
+                extensions: '',
+                protocol: Array.isArray(protocols) ? protocols[0] || '' : (protocols || ''),
+                readyState: 1, // WebSocket.OPEN
+                url: String(url),
+                CONNECTING: 0,
+                OPEN: 1,
+                CLOSING: 2,
+                CLOSED: 3,
+                addEventListener: function(event, fn) {
+                  listeners[event] = listeners[event] || [];
+                  listeners[event].push(fn);
+                  if (event === 'open') {
+                    setTimeout(function() {
+                      try {
+                        if (typeof dummy.onopen === 'function') dummy.onopen({ type: 'open' });
+                        fn({ type: 'open' });
+                      } catch (e) {}
+                    }, 0);
+                  }
+                },
+                removeEventListener: function(event, fn) {
+                  if (listeners[event]) {
+                    listeners[event] = listeners[event].filter(function(h) { return h !== fn; });
+                  }
+                },
+                dispatchEvent: function(event) {
+                  var list = listeners[event.type] || [];
+                  for (var i = 0; i < list.length; i++) {
+                    try { list[i](event); } catch (e) {}
+                  }
+                  return true;
+                },
+                send: function() {},
+                close: function() { dummy.readyState = 3; },
+                onopen: null,
+                onclose: null,
+                onerror: null,
+                onmessage: null
+              };
+              return dummy;
+            }
+            return new OriginalWebSocket(url, protocols);
+          };
+          window.WebSocket.CONNECTING = 0;
+          window.WebSocket.OPEN = 1;
+          window.WebSocket.CLOSING = 2;
+          window.WebSocket.CLOSED = 3;
+        }
+
+        window.addEventListener('unhandledrejection', function(event) {
+          if (event && event.reason) {
+            var msg = String(event.reason.message || event.reason);
+            if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('vite') !== -1) {
+              event.preventDefault();
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            }
+          }
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          if (event) {
+            var msg = String(event.message || '');
+            var file = String(event.filename || '');
+            if (msg.indexOf('WebSocket') !== -1 || file.indexOf('@vite/client') !== -1) {
+              event.preventDefault();
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            }
+          }
+        }, true);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <title>ASTREON — Discover Beyond the Screen</title>
     <meta name="description" content="ASTREON is a premium digital entertainment discovery platform to explore films, TV series, official trailers, editorial news, and curate your personal watchlist." />
     <meta name="theme-color" content="#080A12" />
@@ -11,7 +94,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ASTREON" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="canonical" href="https://ais-pre-6r3hrvm6drtg3rbntiafus-974395331959.europe-west2.run.app" />
 
     <!-- OpenGraph Metadata -->
     <meta property="og:type" content="website" />
@@ -19,7 +101,7 @@
     <meta property="og:title" content="ASTREON — Discover Beyond the Screen" />
     <meta property="og:description" content="Explore films, TV series, official trailers, editorial news, and curate your personal watchlist." />
     <meta property="og:image" content="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&h=630&q=80" />
-    <meta property="og:url" content="https://ais-pre-6r3hrvm6drtg3rbntiafus-974395331959.europe-west2.run.app" />
+    <meta property="og:url" content="https://astreon.app/" />
 
     <!-- Twitter / X Metadata -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -34,7 +116,7 @@
       "@type": "WebApplication",
       "name": "ASTREON",
       "alternateName": "ASTREON Entertainment Discovery",
-      "url": "https://ais-pre-6r3hrvm6drtg3rbntiafus-974395331959.europe-west2.run.app",
+      "url": "https://astreon.app/",
       "description": "ASTREON is a premium digital entertainment discovery platform to explore films, TV series, official trailers, editorial news, and curate your personal watchlist.",
       "applicationCategory": "EntertainmentApplication",
       "operatingSystem": "All",
@@ -47,29 +129,11 @@
     </script>
 
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-      // Gracefully prevent unhandled WebSocket rejections in environments where HMR is disabled
-      window.addEventListener('unhandledrejection', function(event) {
-        if (event && event.reason && (
-          String(event.reason).includes('WebSocket') ||
-          String(event.reason?.message).includes('WebSocket')
-        )) {
-          event.preventDefault();
-        }
-      });
-      window.addEventListener('error', function(event) {
-        if (event && (
-          String(event.message).includes('WebSocket') ||
-          String(event.filename).includes('@vite/client')
-        )) {
-          event.preventDefault();
-        }
-      });
-    </script>
   </head>
   <body class="bg-[#080A12] text-[#F8FAFC] antialiased selection:bg-[#8B5CF6] selection:text-white">
     <div id="root"></div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserProfile } from '../types/entertainment';
 import { BrandLogo } from './BrandLogo';
 import {
@@ -8,6 +8,7 @@ import {
   resetPassword
 } from '../services/firebase';
 import { X, Mail, Lock, User, AlertCircle, Check } from 'lucide-react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,6 +24,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(modalRef, isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -102,39 +106,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     }
   };
 
-  const handleQuickDemo = (role: 'user' | 'admin') => {
-    const demoUser: UserProfile = {
-      uid: role === 'admin' ? 'admin-astreon-root' : 'user-astreon-demo',
-      displayName: role === 'admin' ? 'Curator Admin' : 'Cinema Enthusiast',
-      email: role === 'admin' ? 'danny2010qwert@gmail.com' : 'curator@astreon.org',
-      preferredGenres: ['Science Fiction', 'Drama', 'Adventure'],
-      notificationPreferences: {
-        emailAlerts: true,
-        newReleases: true,
-        curatedWeekly: true
-      },
-      createdAt: '2024-01-01T00:00:00Z',
-      isAdmin: role === 'admin'
-    };
-    onLoginSuccess(demoUser);
-    onClose();
-  };
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
+      onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-[#111421] border border-[#272B3A] rounded-2xl p-6 sm:p-8 shadow-2xl"
+        ref={modalRef}
+        className="relative w-full md:max-w-md max-h-[92dvh] overflow-y-auto bg-[#111421] border-t md:border border-[#272B3A] rounded-t-3xl md:rounded-2xl p-6 sm:p-8 shadow-2xl pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile bottom-sheet drag handle */}
+        <div className="md:hidden w-10 h-1.5 rounded-full bg-[#272B3A] mx-auto -mt-2 mb-4" aria-hidden="true" />
+
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-[#858B9B] hover:text-[#F8FAFC] rounded-lg bg-[#191D2B] border border-[#272B3A] transition-colors cursor-pointer"
+          className="absolute top-4 right-4 min-w-[40px] min-h-[40px] md:min-w-0 md:min-h-0 flex items-center justify-center p-1.5 text-[#858B9B] hover:text-[#F8FAFC] rounded-lg bg-[#191D2B] border border-[#272B3A] transition-colors cursor-pointer"
           aria-label="Close authentication modal"
         >
           <X className="w-4 h-4" />
@@ -288,29 +279,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               : 'Dispatch Reset Link'}
           </button>
         </form>
-
-        {/* Instant Access Demo Profile Switcher */}
-        <div className="mt-5 p-3 rounded-xl bg-[#080A12] border border-[#272B3A] space-y-2">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-[#38BDF8] text-center">
-            One-Click Verified Profiles
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickDemo('user')}
-              className="py-1 px-2.5 rounded-lg bg-[#191D2B] hover:bg-[#272B3A] text-xs font-medium text-[#F8FAFC] border border-[#272B3A] transition-colors cursor-pointer"
-            >
-              Member Account
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickDemo('admin')}
-              className="py-1 px-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-xs font-medium text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
-            >
-              Admin Curator
-            </button>
-          </div>
-        </div>
 
         {/* Footer Mode Switcher */}
         <div className="mt-5 pt-3 border-t border-[#272B3A] text-center text-xs text-[#858B9B]">

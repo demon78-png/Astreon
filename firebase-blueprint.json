@@ -11,6 +11,8 @@
         "avatar": { "type": "string", "maxLength": 500 },
         "preferredGenres": { "type": "array" },
         "notificationPreferences": { "type": "object" },
+        "playbackPreferences": { "type": "object" },
+        "watchRegion": { "type": "string", "maxLength": 10 },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
@@ -26,6 +28,7 @@
         "mediaType": { "type": "string", "enum": ["movie", "tv"] },
         "title": { "type": "string", "maxLength": 200 },
         "posterPath": { "type": "string", "maxLength": 500 },
+        "backdropPath": { "type": "string", "maxLength": 500 },
         "voteAverage": { "type": "number" },
         "releaseDate": { "type": "string", "maxLength": 50 },
         "genres": { "type": "array" },
@@ -43,12 +46,31 @@
         "mediaType": { "type": "string", "enum": ["movie", "tv"] },
         "title": { "type": "string", "maxLength": 200 },
         "posterPath": { "type": "string", "maxLength": 500 },
+        "backdropPath": { "type": "string", "maxLength": 500 },
         "voteAverage": { "type": "number" },
         "releaseDate": { "type": "string", "maxLength": 50 },
         "genres": { "type": "array" },
         "addedAt": { "type": "string" }
       },
       "required": ["mediaId", "mediaType", "title", "addedAt"]
+    },
+    "WatchHistoryEntry": {
+      "title": "Watch History Entry",
+      "description": "A movie or TV series opened for detail viewing by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "mediaId": { "type": "number" },
+        "mediaType": { "type": "string", "enum": ["movie", "tv"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "posterPath": { "type": "string", "maxLength": 500 },
+        "backdropPath": { "type": "string", "maxLength": 500 },
+        "voteAverage": { "type": "number" },
+        "releaseDate": { "type": "string", "maxLength": 50 },
+        "genres": { "type": "array" },
+        "viewedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "mediaId", "mediaType", "title", "viewedAt"]
     },
     "SearchHistoryEntry": {
       "title": "Search History Entry",
@@ -72,12 +94,24 @@
         "mediaId": { "type": "number" },
         "mediaType": { "type": "string", "enum": ["movie", "tv"] },
         "rating": { "type": "number" },
-        "reviewText": { "type": "string", "maxLength": 2000, "minLength": 5 },
+        "starRating": { "type": "number", "description": "User 1-5 star rating" },
+        "reviewText": { "type": "string", "maxLength": 2000, "minLength": 0 },
         "status": { "type": "string", "enum": ["published", "pending", "flagged"] },
+        "helpfulCount": { "type": "number" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
-      "required": ["userId", "userName", "mediaId", "rating", "reviewText", "status", "createdAt"]
+      "required": ["id", "userId", "userName", "mediaId", "mediaType", "rating", "reviewText", "status", "createdAt"]
+    },
+    "HelpfulVote": {
+      "title": "Review Helpful Vote",
+      "description": "Tracks which user voted a community review as helpful",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "createdAt"]
     },
     "Article": {
       "title": "Editorial Article",
@@ -139,6 +173,23 @@
         "timestamp": { "type": "string" }
       },
       "required": ["id", "actor", "action", "targetType", "timestamp"]
+    },
+    "CustomCollection": {
+      "title": "Custom Curated Collection",
+      "description": "User-curated, optionally shareable list of films and television series",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "ownerName": { "type": "string", "maxLength": 100 },
+        "name": { "type": "string", "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 400 },
+        "isPublic": { "type": "boolean" },
+        "items": { "type": "array" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerId", "ownerName", "name", "isPublic", "items", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -154,13 +205,25 @@
       "schema": { "$ref": "#/entities/FavoriteEntry" },
       "description": "Private user favourite items"
     },
+    "/users/{userId}/watchHistory/{entryId}": {
+      "schema": { "$ref": "#/entities/WatchHistoryEntry" },
+      "description": "Private user detail-view watch history entries"
+    },
     "/users/{userId}/searchHistory/{entryId}": {
       "schema": { "$ref": "#/entities/SearchHistoryEntry" },
       "description": "Private user discovery search history"
     },
+    "/collections/{collectionId}": {
+      "schema": { "$ref": "#/entities/CustomCollection" },
+      "description": "Custom user-curated lists (private to owner or publicly shareable by link)"
+    },
     "/reviews/{reviewId}": {
       "schema": { "$ref": "#/entities/Review" },
       "description": "Public community reviews and ratings"
+    },
+    "/reviews/{reviewId}/helpfulVotes/{voterId}": {
+      "schema": { "$ref": "#/entities/HelpfulVote" },
+      "description": "Per-user helpful upvote marker on reviews"
     },
     "/news/{articleId}": {
       "schema": { "$ref": "#/entities/Article" },

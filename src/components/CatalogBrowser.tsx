@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MediaItem, MediaType, FilterState } from '../types/entertainment';
 import { MediaCard } from './MediaCard';
-import { filterMedia, sortMedia } from '../utils/entertainment';
-import { Filter, RotateCcw, Film, Tv } from 'lucide-react';
+import { filterMedia, sortMedia, extractCatalogFacets } from '../utils/entertainment';
+import type { CatalogFilterParams } from '../utils/routing';
+import { Filter, RotateCcw, Film, Tv, Loader2, ChevronDown } from 'lucide-react';
+import { useI18n } from '../contexts/I18nContext';
 
 interface CatalogBrowserProps {
   mediaType: MediaType | 'all';
@@ -15,18 +17,33 @@ interface CatalogBrowserProps {
   onToggleFavorite?: (item: MediaItem) => void;
   title: string;
   subtitle: string;
+  initialFilters?: CatalogFilterParams;
+  onFiltersChange?: (filters: CatalogFilterParams) => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: (filters: CatalogFilterParams) => void;
+  autoplayTrailers?: boolean;
+  isOnline?: boolean;
 }
 
-const GENRE_LIST = [
-  'All',
-  'Science Fiction',
-  'Drama',
-  'Adventure',
-  'Mystery',
-  'History',
-  'Animation',
+const BASE_GENRES = [
   'Action',
-  'Comedy'
+  'Adventure',
+  'Animation',
+  'Comedy',
+  'Crime',
+  'Documentary',
+  'Drama',
+  'Family',
+  'Fantasy',
+  'History',
+  'Horror',
+  'Mystery',
+  'Romance',
+  'Sci-Fi & Fantasy',
+  'Science Fiction',
+  'Thriller',
+  'War'
 ];
 
 export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
@@ -39,16 +56,69 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
   onToggleWatchlist,
   onToggleFavorite,
   title,
-  subtitle
+  subtitle,
+  initialFilters,
+  onFiltersChange,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
+  autoplayTrailers = true,
+  isOnline = true
 }) => {
-  const [selectedGenre, setSelectedGenre] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('All');
-  const [minRating, setMinRating] = useState<number>(0);
-  const [sortBy, setSortBy] = useState<FilterState['sortBy']>('popularity.desc');
-  const [searchFilter, setSearchFilter] = useState('');
+  const { t, tGenre } = useI18n();
+  const [selectedGenre, setSelectedGenre] = useState(initialFilters?.genre || 'All');
+  const [selectedYear, setSelectedYear] = useState(initialFilters?.year || 'All');
+  const [minRating, setMinRating] = useState<number>(initialFilters?.minRating || 0);
+  const [sortBy, setSortBy] = useState<FilterState['sortBy']>(
+    initialFilters?.sort || 'popularity.desc'
+  );
+  const [searchFilter, setSearchFilter] = useState(initialFilters?.q || '');
+
+  // Keep filter controls synchronized with browser navigation (popstate / view switch)
+  useEffect(() => {
+    setSelectedGenre(initialFilters?.genre || 'All');
+    setSelectedYear(initialFilters?.year || 'All');
+    setMinRating(initialFilters?.minRating || 0);
+    setSortBy(initialFilters?.sort || 'popularity.desc');
+    setSearchFilter(initialFilters?.q || '');
+  }, [
+    mediaType,
+    initialFilters?.genre,
+    initialFilters?.year,
+    initialFilters?.minRating,
+    initialFilters?.sort,
+    initialFilters?.q
+  ]);
+
+  const facets = useMemo(() => {
+    const derived = extractCatalogFacets(items);
+    const mergedGenres = Array.from(new Set([...BASE_GENRES, ...derived.genres])).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    return {
+      genres: ['All', ...mergedGenres],
+      years: derived.years
+    };
+  }, [items]);
+
+  const emitFilterChange = (next: {
+    genre: string;
+    year: string;
+    minRating: number;
+    sort: FilterState['sortBy'];
+    q: string;
+  }) => {
+    onFiltersChange?.({
+      genre: next.genre !== 'All' ? next.genre : undefined,
+      year: next.year !== 'All' ? next.year : undefined,
+      minRating: next.minRating > 0 ? next.minRating : undefined,
+      sort: next.sort !== 'popularity.desc' ? next.sort : undefined,
+      q: next.q.trim() ? next.q.trim() : undefined
+    });
+  };
 
   const filteredItems = useMemo(() => {
-    let result = filterMedia(items, {
+    const result = filterMedia(items, {
       type: mediaType === 'all' ? undefined : mediaType,
       genre: selectedGenre === 'All' ? undefined : selectedGenre,
       year: selectedYear === 'All' ? undefined : selectedYear,
@@ -64,10 +134,29 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
     setMinRating(0);
     setSortBy('popularity.desc');
     setSearchFilter('');
+    emitFilterChange({
+      genre: 'All',
+      year: 'All',
+      minRating: 0,
+      sort: 'popularity.desc',
+      q: ''
+    });
   };
 
   const hasActiveFilters =
-    selectedGenre !== 'All' || selectedYear !== 'All' || minRating > 0 || sortBy !== 'popularity.desc' || searchFilter !== '';
+    selectedGenre !== 'All' ||
+    selectedYear !== 'All' ||
+    minRating > 0 ||
+    sortBy !== 'popularity.desc' ||
+    searchFilter !== '';
+
+  const currentFilterParams: CatalogFilterParams = {
+    genre: selectedGenre !== 'All' ? selectedGenre : undefined,
+    year: selectedYear !== 'All' ? selectedYear : undefined,
+    minRating: minRating > 0 ? minRating : undefined,
+    sort: sortBy !== 'popularity.desc' ? sortBy : undefined,
+    q: searchFilter.trim() || undefined
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -76,7 +165,7 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
         <div>
           <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#38BDF8] mb-1">
             {mediaType === 'movie' ? <Film className="w-3.5 h-3.5" /> : <Tv className="w-3.5 h-3.5" />}
-            <span>{mediaType === 'movie' ? 'Cinema Exploration' : 'Television Series'}</span>
+            <span>{mediaType === 'movie' ? t('catalog.cinemaEyebrow') : t('catalog.tvEyebrow')}</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-display font-bold text-[#F8FAFC] tracking-tight">
             {title}
@@ -86,92 +175,146 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
           </p>
         </div>
 
-        <div className="text-xs text-[#858B9B] font-mono">
-          Showing <span className="text-[#38BDF8] font-bold">{filteredItems.length}</span> titles
+        <div className="text-xs text-[#858B9B] font-mono tabular-nums whitespace-nowrap shrink-0">
+          {t('catalog.showingCount', { count: filteredItems.length })}
         </div>
       </div>
 
       {/* Filter Toolbar */}
       <div className="p-4 rounded-2xl bg-[#111421] border border-[#272B3A] space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="flex items-center gap-1.5 font-medium text-[#A1A1AA] mr-1">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-wrap items-center gap-2">
+            <span className="col-span-2 sm:col-span-4 lg:col-span-1 flex items-center gap-1.5 font-medium text-[#A1A1AA] mb-0.5 lg:mb-0 lg:mr-1">
               <Filter className="w-3.5 h-3.5 text-[#8B5CF6]" />
-              <span>Filters:</span>
+              <span>{t('catalog.filters')}</span>
             </span>
 
             {/* Genre Filter */}
             <select
+              aria-label="Filter by genre"
               value={selectedGenre}
-              onChange={(e) => setSelectedGenre(e.target.value)}
-              className="bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedGenre(val);
+                emitFilterChange({
+                  genre: val,
+                  year: selectedYear,
+                  minRating,
+                  sort: sortBy,
+                  q: searchFilter
+                });
+              }}
+              className="w-full lg:w-auto min-h-[42px] lg:min-h-0 bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-2 lg:py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
             >
-              {GENRE_LIST.map((g) => (
+              {facets.genres.map((g) => (
                 <option key={g} value={g}>
-                  {g === 'All' ? 'All Genres' : g}
+                  {g === 'All' ? t('catalog.allGenres') : tGenre(g)}
                 </option>
               ))}
             </select>
 
             {/* Year Filter */}
             <select
+              aria-label="Filter by release year"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedYear(val);
+                emitFilterChange({
+                  genre: selectedGenre,
+                  year: val,
+                  minRating,
+                  sort: sortBy,
+                  q: searchFilter
+                });
+              }}
+              className="w-full lg:w-auto min-h-[42px] lg:min-h-0 bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-2 lg:py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
             >
-              <option value="All">All Years</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
-              <option value="2018">2018</option>
-              <option value="2017">2017</option>
-              <option value="2014">2014</option>
+              <option value="All">{t('catalog.allYears')}</option>
+              {facets.years.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
             </select>
 
             {/* Min Rating Filter */}
             <select
+              aria-label="Filter by minimum score"
               value={minRating}
-              onChange={(e) => setMinRating(Number(e.target.value))}
-              className="bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setMinRating(val);
+                emitFilterChange({
+                  genre: selectedGenre,
+                  year: selectedYear,
+                  minRating: val,
+                  sort: sortBy,
+                  q: searchFilter
+                });
+              }}
+              className="w-full lg:w-auto min-h-[42px] lg:min-h-0 bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-2 lg:py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
             >
-              <option value={0}>Any Score</option>
-              <option value={8.0}>8.0+ Exceptional</option>
-              <option value={7.5}>7.5+ Highly Rated</option>
-              <option value={7.0}>7.0+ Recommended</option>
+              <option value={0}>{t('catalog.anyScore')}</option>
+              <option value={8.0}>{t('catalog.score80')}</option>
+              <option value={7.5}>{t('catalog.score75')}</option>
+              <option value={7.0}>{t('catalog.score70')}</option>
             </select>
 
             {/* Sort Order */}
             <select
+              aria-label="Sort catalog order"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
+              onChange={(e) => {
+                const val = e.target.value as FilterState['sortBy'];
+                setSortBy(val);
+                emitFilterChange({
+                  genre: selectedGenre,
+                  year: selectedYear,
+                  minRating,
+                  sort: val,
+                  q: searchFilter
+                });
+              }}
+              className="w-full lg:w-auto min-h-[42px] lg:min-h-0 bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-2 lg:py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] cursor-pointer"
             >
-              <option value="popularity.desc">Most Popular</option>
-              <option value="vote_average.desc">Highest Rated</option>
-              <option value="primary_release_date.desc">Release Date (Newest)</option>
-              <option value="title.asc">Title (A-Z)</option>
+              <option value="popularity.desc">{t('catalog.sortPopular')}</option>
+              <option value="vote_average.desc">{t('catalog.sortRated')}</option>
+              <option value="primary_release_date.desc">{t('catalog.sortNewest')}</option>
+              <option value="title.asc">{t('catalog.sortAlpha')}</option>
             </select>
           </div>
 
           {/* Quick Search and Reset */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <input
               type="text"
+              aria-label="Filter catalog by keyword"
               value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Filter by keyword..."
-              className="bg-[#191D2B] text-[#F8FAFC] placeholder-[#858B9B] border border-[#272B3A] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] w-36 sm:w-48"
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchFilter(val);
+                emitFilterChange({
+                  genre: selectedGenre,
+                  year: selectedYear,
+                  minRating,
+                  sort: sortBy,
+                  q: val
+                });
+              }}
+              placeholder={t('catalog.keywordPlaceholder')}
+              className="flex-1 lg:flex-initial min-h-[42px] lg:min-h-0 bg-[#191D2B] text-[#F8FAFC] placeholder-[#858B9B] border border-[#272B3A] rounded-lg px-3 py-2 lg:py-1.5 text-xs focus:outline-none focus:border-[#8B5CF6] lg:w-48"
             />
 
             {hasActiveFilters && (
               <button
+                type="button"
                 onClick={handleResetFilters}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#191D2B] text-[#858B9B] hover:text-[#F8FAFC] border border-[#272B3A] text-xs transition-colors cursor-pointer"
-                title="Reset all filters"
+                className="flex items-center justify-center gap-1.5 min-h-[42px] lg:min-h-0 px-3 py-2 lg:py-1.5 rounded-lg bg-[#191D2B] text-[#858B9B] hover:text-[#F8FAFC] border border-[#272B3A] text-xs transition-colors cursor-pointer shrink-0"
+                title={t('catalog.resetFilters')}
               >
-                <RotateCcw className="w-3 h-3" />
-                <span className="hidden sm:inline">Reset</span>
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{t('catalog.reset')}</span>
               </button>
             )}
           </div>
@@ -180,31 +323,59 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
 
       {/* Grid of Cards */}
       {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-          {filteredItems.map((item) => (
-            <MediaCard
-              key={item.id}
-              item={item}
-              onSelect={onSelect}
-              onWatchTrailer={onWatchTrailer}
-              isWatchlisted={watchlistIds.includes(item.id)}
-              isFavorite={favoriteIds.includes(item.id)}
-              onToggleWatchlist={onToggleWatchlist}
-              onToggleFavorite={onToggleFavorite}
-            />
-          ))}
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 lg:gap-6">
+            {filteredItems.map((item) => (
+              <MediaCard
+                key={item.id}
+                item={item}
+                onSelect={onSelect}
+                onWatchTrailer={onWatchTrailer}
+                isWatchlisted={watchlistIds.includes(item.id)}
+                isFavorite={favoriteIds.includes(item.id)}
+                onToggleWatchlist={onToggleWatchlist}
+                onToggleFavorite={onToggleFavorite}
+                autoplayTrailers={autoplayTrailers}
+                isOnline={isOnline}
+              />
+            ))}
+          </div>
+
+          {hasMore && onLoadMore && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                disabled={loadingMore}
+                onClick={() => onLoadMore(currentFilterParams)}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] hover:border-[#8B5CF6]/50 text-xs font-semibold text-[#F8FAFC] transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#38BDF8]" />
+                    <span>{t('catalog.loadingMore')}</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#38BDF8]" />
+                    <span>{mediaType === 'tv' ? t('catalog.loadMoreSeries') : t('catalog.loadMoreTitles')}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="py-20 text-center rounded-2xl border border-dashed border-[#272B3A] bg-[#111421]/50 space-y-3">
-          <p className="text-base font-semibold text-[#F8FAFC]">No titles match the chosen filters</p>
+          <p className="text-base font-semibold text-[#F8FAFC]">{t('catalog.emptyHeading')}</p>
           <p className="text-xs text-[#858B9B] max-w-sm mx-auto">
-            Try adjusting your genre, year, or rating thresholds to uncover more titles.
+            {t('catalog.emptyBody')}
           </p>
           <button
+            type="button"
             onClick={handleResetFilters}
             className="px-4 py-2 rounded-xl bg-[#8B5CF6] text-white text-xs font-semibold hover:bg-[#7C3AED] transition-colors cursor-pointer"
           >
-            Reset Filters
+            {t('catalog.resetFilters')}
           </button>
         </div>
       )}

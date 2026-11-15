@@ -32,9 +32,64 @@ export interface VideoTrailer {
 export interface WatchProvider {
   providerId: number;
   providerName: string;
-  logoPath: string;
-  type: 'flatrate' | 'rent' | 'buy';
+  logoPath?: string;
+  type: 'flatrate' | 'rent' | 'buy' | 'free' | 'ads';
   link?: string;
+}
+
+export type WatchAvailabilityGroupKey = 'stream' | 'free' | 'rent' | 'buy';
+
+export interface WatchProviderGroup {
+  key: WatchAvailabilityGroupKey;
+  providers: WatchProvider[];
+}
+
+export interface TvEpisode {
+  id: number;
+  episodeNumber: number;
+  seasonNumber: number;
+  name: string;
+  overview: string;
+  airDate?: string;
+  runtime?: number | null;
+  stillPath?: string | null;
+  voteAverage?: number;
+}
+
+export interface TvSeasonDetails {
+  id: number;
+  seasonNumber: number;
+  name: string;
+  overview: string;
+  airDate?: string;
+  posterPath?: string | null;
+  episodes: TvEpisode[];
+  source?: 'tmdb' | 'catalog';
+}
+
+export interface PersonCredit {
+  id: number;
+  mediaType: MediaType;
+  title: string;
+  posterPath?: string;
+  backdropPath?: string;
+  character?: string;
+  job?: string;
+  releaseDate?: string;
+  voteAverage: number;
+}
+
+export interface PersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday?: string | null;
+  deathday?: string | null;
+  placeOfBirth?: string | null;
+  knownForDepartment?: string;
+  profilePath?: string | null;
+  credits: PersonCredit[];
+  source?: 'tmdb' | 'catalog';
 }
 
 export interface MediaItem {
@@ -62,6 +117,7 @@ export interface MediaItem {
   crew?: CrewMember[];
   videos?: VideoTrailer[];
   providers?: WatchProvider[];
+  providerRegion?: string;
   similarIds?: number[];
   featured?: boolean;
 }
@@ -73,7 +129,8 @@ export interface UserReview {
   userAvatar?: string;
   mediaId: number;
   mediaType: MediaType;
-  rating: number; // 1 to 10
+  rating: number; // 1 to 10 normalized score
+  starRating?: number; // 1 to 5 stars
   reviewText: string;
   status: 'published' | 'pending' | 'flagged';
   createdAt: string;
@@ -104,10 +161,14 @@ export interface UserProfile {
   email: string;
   avatar?: string;
   preferredGenres: string[];
+  watchRegion?: string;
   notificationPreferences: {
     emailAlerts: boolean;
     newReleases: boolean;
     curatedWeekly: boolean;
+  };
+  playbackPreferences?: {
+    autoplayTrailers: boolean;
   };
   createdAt: string;
   isAdmin?: boolean;
@@ -139,6 +200,43 @@ export interface FavoriteItem {
   addedAt: string;
 }
 
+export interface WatchHistoryItem {
+  id: string;
+  mediaId: number;
+  mediaType: MediaType;
+  title: string;
+  posterPath: string;
+  backdropPath?: string;
+  voteAverage: number;
+  releaseDate?: string;
+  genres: string[];
+  viewedAt: string;
+}
+
+export interface CollectionMediaEntry {
+  mediaId: number;
+  mediaType: MediaType;
+  title: string;
+  posterPath: string;
+  backdropPath?: string;
+  voteAverage: number;
+  releaseDate?: string;
+  genres: string[];
+  addedAt: string;
+}
+
+export interface CustomCollection {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  name: string;
+  description: string;
+  isPublic: boolean;
+  items: CollectionMediaEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminAuditLog {
   id: string;
   actor: string;
@@ -157,3 +255,4 @@ export interface FilterState {
   sortBy: 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' | 'title.asc';
   searchQuery: string;
 }
+

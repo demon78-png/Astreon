@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useRef } from 'react';
 import { X, Shield, BookOpen, HelpCircle, FileText } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export type LegalTab = 'about' | 'privacy' | 'terms' | 'attribution' | 'help' | 'contact';
 
@@ -17,36 +18,38 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   onTabChange,
   onClose
 }) => {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(modalRef, isOpen, onClose);
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
       aria-labelledby="legal-modal-title"
+      onClick={onClose}
     >
       <div
-        className="relative w-full max-w-3xl bg-[#111421] border border-[#272B3A] rounded-2xl overflow-hidden shadow-2xl my-auto"
+        ref={modalRef}
+        className="relative w-full md:max-w-3xl max-h-[90dvh] md:max-h-[90vh] flex flex-col bg-[#111421] border-t md:border border-[#272B3A] rounded-t-3xl md:rounded-2xl overflow-hidden shadow-2xl md:my-auto pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile bottom-sheet drag handle */}
+        <div className="md:hidden flex justify-center pt-2.5 pb-1 bg-[#080A12] shrink-0">
+          <div className="w-10 h-1.5 rounded-full bg-[#272B3A]" aria-hidden="true" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#272B3A] bg-[#080A12]">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b border-[#272B3A] bg-[#080A12] shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <BrandLogo size="sm" />
-            <span className="text-xs text-[#858B9B]">· Trust, Privacy & Legal Architecture</span>
+            <span className="text-xs text-[#858B9B] truncate">· Trust, Privacy & Legal Architecture</span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[#858B9B] hover:text-[#F8FAFC] rounded-lg bg-[#191D2B] border border-[#272B3A] transition-colors cursor-pointer"
+            className="min-w-[40px] min-h-[40px] md:min-w-0 md:min-h-0 flex items-center justify-center p-1.5 text-[#858B9B] hover:text-[#F8FAFC] rounded-lg bg-[#191D2B] border border-[#272B3A] transition-colors cursor-pointer shrink-0"
             aria-label="Close legal modal"
           >
             <X className="w-4 h-4" />
@@ -54,7 +57,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 px-6 pt-3 border-b border-[#272B3A] bg-[#080A12]/60 overflow-x-auto text-xs">
+        <div className="flex items-center gap-1 px-5 sm:px-6 pt-3 border-b border-[#272B3A] bg-[#080A12]/60 overflow-x-auto hide-scrollbar text-xs shrink-0">
           {[
             { id: 'about', label: 'About ASTREON' },
             { id: 'attribution', label: 'Content Attribution' },
@@ -65,7 +68,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id as LegalTab)}
-              className={`pb-2.5 px-3 font-medium whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
+              className={`min-h-[40px] md:min-h-0 pb-2.5 px-3 font-medium whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? 'border-[#8B5CF6] text-[#F8FAFC]'
                   : 'border-transparent text-[#858B9B] hover:text-[#A1A1AA]'
@@ -77,7 +80,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 max-h-[65vh] overflow-y-auto text-xs sm:text-sm text-[#A1A1AA] leading-relaxed space-y-4 custom-scrollbar">
+        <div className="p-5 sm:p-8 flex-1 md:max-h-[65vh] overflow-y-auto text-xs sm:text-sm text-[#A1A1AA] leading-relaxed space-y-4 custom-scrollbar">
           {activeTab === 'about' && (
             <div className="space-y-4">
               <h2 id="legal-modal-title" className="text-lg font-display font-bold text-[#F8FAFC]">

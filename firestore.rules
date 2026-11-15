@@ -19,7 +19,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'danny2010qwert@gmail.com' ||
+        (request.auth.token.email == 'danny2010qwert@gmail.com' && request.auth.token.email_verified == true) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -39,33 +39,115 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.uid is string &&
              data.displayName is string && data.displayName.size() <= 100 &&
-             data.email is string && data.email.size() <= 150;
+             data.email is string && data.email.size() <= 150 &&
+             (!('watchRegion' in data) || (data.watchRegion is string && data.watchRegion.size() >= 2 && data.watchRegion.size() <= 10)) &&
+             (!('playbackPreferences' in data) || (
+               data.playbackPreferences is map &&
+               data.playbackPreferences.keys().hasOnly(['autoplayTrailers']) &&
+               data.playbackPreferences.autoplayTrailers is bool
+             ));
     }
 
     function isValidWatchlist(data) {
-      return data.mediaId is number &&
+      return data.keys().hasAll(['id', 'mediaId', 'mediaType', 'title', 'posterPath', 'voteAverage', 'genres', 'addedAt']) &&
+             data.keys().hasOnly(['id', 'mediaId', 'mediaType', 'title', 'posterPath', 'backdropPath', 'voteAverage', 'releaseDate', 'genres', 'addedAt']) &&
+             isValidId(data.id) &&
+             data.mediaId is number && data.mediaId > 0 &&
              data.mediaType in ['movie', 'tv'] &&
-             data.title is string && data.title.size() <= 200;
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.posterPath is string && data.posterPath.size() <= 500 &&
+             (!('backdropPath' in data) || (data.backdropPath is string && data.backdropPath.size() <= 500)) &&
+             data.voteAverage is number && data.voteAverage >= 0 && data.voteAverage <= 10 &&
+             (!('releaseDate' in data) || (data.releaseDate is string && data.releaseDate.size() <= 50)) &&
+             data.genres is list && data.genres.size() <= 10 &&
+             data.addedAt is string && data.addedAt.size() <= 64;
     }
 
     function isValidFavorite(data) {
-      return data.mediaId is number &&
+      return data.keys().hasAll(['id', 'mediaId', 'mediaType', 'title', 'posterPath', 'voteAverage', 'genres', 'addedAt']) &&
+             data.keys().hasOnly(['id', 'mediaId', 'mediaType', 'title', 'posterPath', 'backdropPath', 'voteAverage', 'releaseDate', 'genres', 'addedAt']) &&
+             isValidId(data.id) &&
+             data.mediaId is number && data.mediaId > 0 &&
              data.mediaType in ['movie', 'tv'] &&
-             data.title is string && data.title.size() <= 200;
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.posterPath is string && data.posterPath.size() <= 500 &&
+             (!('backdropPath' in data) || (data.backdropPath is string && data.backdropPath.size() <= 500)) &&
+             data.voteAverage is number && data.voteAverage >= 0 && data.voteAverage <= 10 &&
+             (!('releaseDate' in data) || (data.releaseDate is string && data.releaseDate.size() <= 50)) &&
+             data.genres is list && data.genres.size() <= 10 &&
+             data.addedAt is string && data.addedAt.size() <= 64;
+    }
+
+    function isValidWatchHistory(data) {
+      return data.keys().hasAll(['id', 'mediaId', 'mediaType', 'title', 'viewedAt']) &&
+             data.keys().hasOnly(['id', 'mediaId', 'mediaType', 'title', 'posterPath', 'backdropPath', 'voteAverage', 'releaseDate', 'genres', 'viewedAt']) &&
+             isValidId(data.id) &&
+             data.mediaId is number && data.mediaId > 0 &&
+             data.mediaType in ['movie', 'tv'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             (!('posterPath' in data) || (data.posterPath is string && data.posterPath.size() <= 500)) &&
+             (!('backdropPath' in data) || (data.backdropPath is string && data.backdropPath.size() <= 500)) &&
+             (!('voteAverage' in data) || (data.voteAverage is number && data.voteAverage >= 0 && data.voteAverage <= 10)) &&
+             (!('releaseDate' in data) || (data.releaseDate is string && data.releaseDate.size() <= 50)) &&
+             (!('genres' in data) || (data.genres is list && data.genres.size() <= 10 && (data.genres.size() == 0 || data.genres[0] is string))) &&
+             data.viewedAt is string && data.viewedAt.size() >= 1 && data.viewedAt.size() <= 64;
     }
 
     function isValidSearch(data) {
-      return data.query is string && data.query.size() <= 200;
+      return data.keys().hasAll(['query', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'query', 'createdAt']) &&
+             data.query is string && data.query.size() >= 1 && data.query.size() <= 200 &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    function isValidCustomCollection(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'ownerName', 'name', 'isPublic', 'items', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'ownerName', 'name', 'description', 'isPublic', 'items', 'createdAt', 'updatedAt']) &&
+             isValidId(data.id) &&
+             data.ownerId is string && data.ownerId == request.auth.uid &&
+             data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 100 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 400)) &&
+             data.isPublic is bool &&
+             data.items is list && data.items.size() <= 50 &&
+             data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 64 &&
+             data.updatedAt is string && data.updatedAt.size() >= 1 && data.updatedAt.size() <= 64;
     }
 
     function isValidReview(data) {
-      return data.userId is string && data.userId == request.auth.uid &&
-             data.userName is string && data.userName.size() <= 100 &&
-             data.mediaId is number &&
+      return data.keys().hasAll(['id', 'userId', 'userName', 'mediaId', 'mediaType', 'rating', 'reviewText', 'status', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'userId', 'userName', 'userAvatar', 'mediaId', 'mediaType', 'rating', 'starRating', 'reviewText', 'status', 'createdAt', 'updatedAt', 'helpfulCount']) &&
+             isValidId(data.id) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100 &&
+             (!('userAvatar' in data) || (data.userAvatar is string && data.userAvatar.size() <= 500)) &&
+             data.mediaId is number && data.mediaId > 0 &&
              data.mediaType in ['movie', 'tv'] &&
              data.rating is number && data.rating >= 1 && data.rating <= 10 &&
-             data.reviewText is string && data.reviewText.size() >= 5 && data.reviewText.size() <= 2000 &&
-             data.status in ['published', 'pending', 'flagged'];
+             (!('starRating' in data) || (data.starRating is number && data.starRating >= 1 && data.starRating <= 5)) &&
+             data.reviewText is string && data.reviewText.size() <= 2000 && (('starRating' in data) || data.reviewText.size() >= 5) &&
+             data.status in ['published', 'pending', 'flagged'] &&
+             data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 64 &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64)) &&
+             (!('helpfulCount' in data) || (data.helpfulCount is number && data.helpfulCount >= 0));
+    }
+
+    function isValidHelpfulUpdate() {
+      return isSignedIn() &&
+             incoming().diff(existing()).affectedKeys().hasOnly(['helpfulCount']) &&
+             incoming().helpfulCount is number &&
+             incoming().helpfulCount >= 0 &&
+             (
+               incoming().helpfulCount == existing().get('helpfulCount', 0) + 1 ||
+               incoming().helpfulCount == existing().get('helpfulCount', 0) - 1
+             );
+    }
+
+    function isValidHelpfulVote(data) {
+      return data.keys().hasAll(['userId', 'createdAt']) &&
+             data.keys().hasOnly(['userId', 'createdAt']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.createdAt is string && data.createdAt.size() <= 64;
     }
 
     function isValidReport(data) {
@@ -77,70 +159,115 @@ service cloud.firestore {
 
     // User profiles & Private Subcollections
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
       allow list: if isAdmin();
-      allow create, update: if isOwner(userId) && isValidUser(incoming());
-      allow delete: if isOwner(userId) || isAdmin();
+      allow create, update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming());
+      allow delete: if isValidId(userId) && (isOwner(userId) || isAdmin());
 
       // Private User Watchlist Subcollection
       match /watchlist/{entryId} {
-        allow read: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidWatchlist(incoming());
-        allow delete: if isOwner(userId);
+        allow get: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+        allow create, update: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isValidWatchlist(incoming());
+        allow delete: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
       }
 
       // Private User Favourites Subcollection
       match /favorites/{entryId} {
-        allow read: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidFavorite(incoming());
-        allow delete: if isOwner(userId);
+        allow get: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+        allow create, update: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isValidFavorite(incoming());
+        allow delete: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
+      }
+
+      // Private User Watch History Subcollection
+      match /watchHistory/{entryId} {
+        allow get: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+        allow create: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isValidWatchHistory(incoming()) && incoming().id == entryId;
+        allow update: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isValidWatchHistory(incoming()) && incoming().id == existing().id && incoming().mediaId == existing().mediaId && incoming().mediaType == existing().mediaType;
+        allow delete: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
       }
 
       // Private User Search History Subcollection
       match /searchHistory/{entryId} {
-        allow read: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidSearch(incoming());
-        allow delete: if isOwner(userId);
+        allow get: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+        allow create, update: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isValidSearch(incoming());
+        allow delete: if isValidId(userId) && isValidId(entryId) && isOwner(userId);
       }
+    }
+
+    // Custom User-Curated Collections (Private or Publicly Shareable)
+    match /collections/{collectionId} {
+      allow get: if isValidId(collectionId) && (
+        existing().isPublic == true ||
+        (isSignedIn() && existing().ownerId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if existing().isPublic == true ||
+        (isSignedIn() && existing().ownerId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(collectionId) && isSignedIn() && isValidCustomCollection(incoming()) && incoming().id == collectionId;
+      allow update: if isValidId(collectionId) && isSignedIn() &&
+        existing().ownerId == request.auth.uid &&
+        isValidCustomCollection(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'isPublic', 'items', 'ownerName', 'updatedAt']);
+      allow delete: if isValidId(collectionId) && (
+        (isSignedIn() && existing().ownerId == request.auth.uid) ||
+        isAdmin()
+      );
     }
 
     // Public Community Reviews & Ratings
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isSignedIn() && isValidReview(incoming());
-      allow update: if (
-        (isSignedIn() && existing().userId == request.auth.uid && isValidReview(incoming())) ||
+      allow create: if isValidId(reviewId) && isSignedIn() && isValidReview(incoming()) && (!('helpfulCount' in incoming()) || incoming().helpfulCount == 0);
+      allow update: if isValidId(reviewId) && (
+        (isSignedIn() && existing().userId == request.auth.uid && isValidReview(incoming()) && incoming().userId == existing().userId && incoming().mediaId == existing().mediaId && incoming().get('helpfulCount', 0) == existing().get('helpfulCount', 0)) ||
+        isValidHelpfulUpdate() ||
         isAdmin()
       );
-      allow delete: if (
+      allow delete: if isValidId(reviewId) && (
         (isSignedIn() && existing().userId == request.auth.uid) ||
         isAdmin()
       );
+
+      // Per-user helpful vote tracking to prevent duplicate voting
+      match /helpfulVotes/{voterId} {
+        allow get: if isValidId(voterId) && isOwner(voterId);
+        allow create: if isValidId(voterId) && isOwner(voterId) && isValidHelpfulVote(incoming());
+        allow delete: if isValidId(voterId) && isOwner(voterId);
+        allow update: if false;
+      }
     }
 
     // Editorial News Articles
     match /news/{articleId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isValidId(articleId) && isAdmin();
     }
 
     // Moderation Reports
     match /reports/{reportId} {
       allow read: if isAdmin() || (isSignedIn() && existing().reporterId == request.auth.uid);
-      allow create: if isSignedIn() && isValidReport(incoming());
-      allow update, delete: if isAdmin();
+      allow create: if isValidId(reportId) && isSignedIn() && isValidReport(incoming());
+      allow update, delete: if isValidId(reportId) && isAdmin();
     }
 
     // Site Settings (e.g. Featured Hero Title Curation)
     match /siteSettings/{documentId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isValidId(documentId) && isAdmin();
     }
 
     // Admin Audit Logs
     match /adminAuditLogs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAdmin() || isSignedIn();
+      allow create: if isValidId(logId) && isAdmin();
       allow update, delete: if false;
     }
   }

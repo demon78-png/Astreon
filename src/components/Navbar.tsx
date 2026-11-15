@@ -1,7 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BrandLogo } from './BrandLogo';
-import { Search, User, Bookmark, Heart, Shield, LogOut, Menu, X, Smartphone, QrCode } from 'lucide-react';
+import {
+  Search,
+  User,
+  Bookmark,
+  Heart,
+  History,
+  Shield,
+  LogOut,
+  Smartphone,
+  Compass,
+  Film,
+  Tv,
+  Newspaper,
+  FolderHeart
+} from 'lucide-react';
 import { UserProfile } from '../types/entertainment';
+import { PWAInstallButton } from './PWAInstallButton';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useI18n } from '../contexts/I18nContext';
 
 interface NavbarProps {
   currentView: string;
@@ -24,226 +41,328 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSignOut,
   watchlistCount
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const { t } = useI18n();
+
+  useEffect(() => {
+    if (!userDropdownOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [userDropdownOpen]);
 
   const navLinks = [
-    { id: 'discover', label: 'Discover' },
-    { id: 'movies', label: 'Movies' },
-    { id: 'tv', label: 'TV Shows' },
-    { id: 'news', label: 'Editorial' }
+    { id: 'discover', label: t('nav.discover'), icon: Compass },
+    { id: 'movies', label: t('nav.movies'), icon: Film },
+    { id: 'tv', label: t('nav.tv'), icon: Tv },
+    { id: 'news', label: t('nav.editorial'), icon: Newspaper }
   ];
 
   const handleLinkClick = (id: string) => {
     onNavigate(id);
-    setMobileMenuOpen(false);
     setUserDropdownOpen(false);
+    setLangMenuOpen(false);
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#272B3A] bg-[#080A12]/90 backdrop-blur-md transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
-        {/* Zone 1: Brand Wordmark */}
-        <div className="shrink-0 flex items-center">
-          <BrandLogo
-            size="md"
-            onClick={() => handleLinkClick('discover')}
-          />
-        </div>
+    <>
+      <header className="sticky top-0 z-40 w-full border-b border-[#272B3A] bg-[#080A12]/90 backdrop-blur-md transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 md:h-16 flex items-center justify-between gap-2 sm:gap-6">
+          {/* Zone 1: Brand Wordmark */}
+          <div className="shrink-0 flex items-center">
+            <BrandLogo
+              size="md"
+              onClick={() => handleLinkClick('discover')}
+            />
+          </div>
 
-        {/* Zone 2: Primary Nav Links */}
-        <nav
-          className="hidden md:flex items-center gap-7 text-sm font-medium text-[#A1A1AA]"
-          aria-label="Main Navigation"
-        >
+          {/* Zone 2: Primary Desktop Nav Links */}
+          <nav
+            className="hidden md:flex items-center gap-7 text-sm font-medium text-[#A1A1AA]"
+            aria-label="Main Navigation"
+          >
+            {navLinks.map((link) => {
+              const isActive = currentView === link.id;
+              return (
+                <button
+                  key={link.id}
+                  onClick={() => handleLinkClick(link.id)}
+                  className={`transition-colors whitespace-nowrap shrink-0 cursor-pointer py-1 relative ${
+                    isActive ? 'text-[#F8FAFC] font-semibold' : 'hover:text-[#F8FAFC]'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {link.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#8B5CF6] rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Zone 3: Language Switcher, Search & Account Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Native PWA Install Trigger */}
+            <div className="hidden lg:block">
+              <PWAInstallButton variant="compact" />
+            </div>
+
+            {/* Mobile / Share QR Code button */}
+            <button
+              onClick={onOpenShare}
+              className="hidden sm:flex items-center justify-center gap-1.5 min-h-[40px] md:min-h-0 px-2.5 py-1.5 text-xs text-[#A1A1AA] hover:text-[#38BDF8] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              title="Scan QR Code or Get Mobile Link"
+              aria-label="Scan QR Code or Get Mobile Link"
+            >
+              <Smartphone className="w-4 h-4 md:w-3.5 md:h-3.5 text-[#38BDF8]" />
+              <span className="hidden xl:inline text-xs">{t('nav.mobileApp')}</span>
+            </button>
+
+            {/* Language Switcher (English, Spanish, French, Japanese) */}
+            <LanguageSwitcher
+              isOpen={langMenuOpen}
+              onOpenChange={(open) => {
+                setLangMenuOpen(open);
+                if (open) setUserDropdownOpen(false);
+              }}
+            />
+
+            {/* Search Trigger Button */}
+            <button
+              onClick={onOpenSearch}
+              className="flex items-center justify-center gap-2 min-h-[40px] min-w-[40px] md:min-h-0 md:min-w-0 px-2.5 sm:px-3 py-1.5 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              aria-label={t('nav.search')}
+            >
+              <Search className="w-4 h-4 md:w-3.5 md:h-3.5 text-[#858B9B]" />
+              <span className="hidden sm:inline">{t('nav.search')}</span>
+              <kbd className="hidden md:inline-block px-1.5 py-0.2 text-[10px] font-mono bg-[#191D2B] text-[#858B9B] border border-[#272B3A] rounded">
+                /
+              </kbd>
+            </button>
+
+            {/* User Account / Auth Button */}
+            {currentUser ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(!userDropdownOpen);
+                    setLangMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 min-h-[40px] md:min-h-0 px-2 py-1 md:p-1.5 text-xs text-[#F8FAFC] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer"
+                  aria-label="User Account Menu"
+                  aria-expanded={userDropdownOpen}
+                >
+                  <div className="w-6 h-6 rounded-md bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 flex items-center justify-center text-xs font-semibold text-[#38BDF8]">
+                    {currentUser.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="hidden sm:inline max-w-[100px] truncate text-xs font-medium">
+                    {currentUser.displayName}
+                  </span>
+                  {watchlistCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums bg-[#8B5CF6] text-white rounded-full">
+                      {watchlistCount}
+                    </span>
+                  )}
+                </button>
+
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-60 rounded-xl bg-[#111421] border border-[#272B3A] shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2 border-b border-[#272B3A]">
+                      <p className="text-xs font-semibold text-[#F8FAFC] truncate">
+                        {currentUser.displayName}
+                      </p>
+                      <p className="text-[11px] text-[#858B9B] truncate">{currentUser.email}</p>
+                    </div>
+
+                    <button
+                      onClick={() => handleLinkClick('watchlist')}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                    >
+                      <Bookmark className="w-3.5 h-3.5 text-[#38BDF8]" />
+                      <span>{t('nav.watchlist')}</span>
+                      {watchlistCount > 0 && (
+                        <span className="ml-auto text-[10px] text-[#858B9B] font-mono tabular-nums">
+                          {watchlistCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleLinkClick('favorites')}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{t('nav.favorites')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleLinkClick('history')}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                    >
+                      <History className="w-3.5 h-3.5 text-[#38BDF8]" />
+                      <span>{t('nav.watchHistory')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleLinkClick('collections')}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                    >
+                      <FolderHeart className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                      <span>{t('nav.collections')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleLinkClick('account')}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                    >
+                      <User className="w-3.5 h-3.5 text-[#858B9B]" />
+                      <span>{t('nav.preferences')}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        onOpenShare();
+                      }}
+                      className="w-full flex sm:hidden items-center gap-2.5 px-4 py-2.5 text-xs text-[#38BDF8] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>{t('nav.mobileApp')}</span>
+                    </button>
+
+                    {currentUser.isAdmin && (
+                      <button
+                        onClick={() => handleLinkClick('admin')}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-amber-300 hover:text-amber-200 hover:bg-[#191D2B] text-left transition-colors cursor-pointer border-t border-[#272B3A] mt-1 pt-2"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>{t('nav.admin')}</span>
+                      </button>
+                    )}
+
+                    <div className="border-t border-[#272B3A] mt-1 pt-1">
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onSignOut();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-rose-400 hover:bg-rose-500/10 text-left transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>{t('nav.signOut')}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={onOpenAuth}
+                className="min-h-[40px] md:min-h-0 px-3 sm:px-3.5 py-1.5 text-xs font-medium text-white bg-[#8B5CF6] hover:bg-[#7C3AED] rounded-lg transition-colors cursor-pointer shadow-sm shadow-[#8B5CF6]/20 whitespace-nowrap shrink-0"
+              >
+                {t('nav.signIn')}
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Fixed Bottom Thumb-Zone Tab Bar (Mobile & 720x1612 portrait, hidden on md+ desktop) */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[#272B3A] bg-[#080A12]/95 backdrop-blur-md pb-safe"
+        aria-label="Bottom Navigation"
+        data-testid="mobile-bottom-nav"
+      >
+        <div className="grid grid-cols-5 items-center h-16 max-w-3xl mx-auto px-1">
           {navLinks.map((link) => {
+            const Icon = link.icon;
             const isActive = currentView === link.id;
             return (
               <button
                 key={link.id}
+                type="button"
                 onClick={() => handleLinkClick(link.id)}
-                className={`transition-colors whitespace-nowrap cursor-pointer py-1 relative ${
-                  isActive ? 'text-[#F8FAFC] font-semibold' : 'hover:text-[#F8FAFC]'
+                className={`relative flex flex-col items-center justify-center min-h-[44px] h-full px-1 transition-colors cursor-pointer ${
+                  isActive ? 'text-[#F8FAFC]' : 'text-[#858B9B] hover:text-[#A1A1AA]'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
-                {link.label}
+                <Icon
+                  className={`w-5 h-5 shrink-0 transition-transform ${
+                    isActive ? 'text-[#38BDF8] scale-105' : ''
+                  }`}
+                />
+                <span
+                  className={`text-[10px] sm:text-[11px] font-medium tracking-tight mt-1 max-w-full truncate ${
+                    isActive ? 'text-[#F8FAFC]' : 'text-[#858B9B]'
+                  }`}
+                >
+                  {link.label}
+                </span>
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#8B5CF6] rounded-full" />
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-[#8B5CF6]"
+                    aria-hidden="true"
+                  />
                 )}
               </button>
             );
           })}
-        </nav>
 
-        {/* Zone 3: Search & Account Controls */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Mobile / Share QR Code button */}
+          {/* 5th Tab: Saved Watchlist / Account */}
           <button
-            onClick={onOpenShare}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[#A1A1AA] hover:text-[#38BDF8] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer"
-            title="Scan QR Code or Get Mobile Link"
-            aria-label="Scan QR Code or Get Mobile Link"
+            type="button"
+            onClick={() => handleLinkClick('watchlist')}
+            className={`relative flex flex-col items-center justify-center min-h-[44px] h-full px-1 transition-colors cursor-pointer ${
+              currentView === 'account' ? 'text-[#F8FAFC]' : 'text-[#858B9B] hover:text-[#A1A1AA]'
+            }`}
+            aria-current={currentView === 'account' ? 'page' : undefined}
           >
-            <Smartphone className="w-3.5 h-3.5 text-[#38BDF8]" />
-            <span className="hidden lg:inline text-xs">Mobile App</span>
-          </button>
-
-          {/* Search Trigger Button */}
-          <button
-            onClick={onOpenSearch}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer"
-            aria-label="Search movies, series, cast and topics"
-          >
-            <Search className="w-3.5 h-3.5 text-[#858B9B]" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[10px] font-mono bg-[#191D2B] text-[#858B9B] border border-[#272B3A] rounded">
-              /
-            </kbd>
-          </button>
-
-          {/* User Account / Auth Button */}
-          {currentUser ? (
-            <div className="relative">
-              <button
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2 p-1.5 text-xs text-[#F8FAFC] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer"
-                aria-label="User Account Menu"
-                aria-expanded={userDropdownOpen}
-              >
-                <div className="w-6 h-6 rounded-md bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 flex items-center justify-center text-xs font-semibold text-[#38BDF8]">
-                  {currentUser.displayName.charAt(0).toUpperCase()}
-                </div>
-                <span className="hidden sm:inline max-w-[100px] truncate text-xs font-medium">
-                  {currentUser.displayName}
+            <div className="relative flex items-center justify-center">
+              <Bookmark
+                className={`w-5 h-5 shrink-0 transition-transform ${
+                  currentView === 'account' ? 'text-[#8B5CF6] fill-[#8B5CF6]/30 scale-105' : ''
+                }`}
+              />
+              {watchlistCount > 0 && (
+                <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-[#8B5CF6] text-[9px] font-mono font-bold text-white tabular-nums">
+                  {watchlistCount > 99 ? '99+' : watchlistCount}
                 </span>
-                {watchlistCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono bg-[#8B5CF6] text-white rounded-full">
-                    {watchlistCount}
-                  </span>
-                )}
-              </button>
-
-              {userDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#111421] border border-[#272B3A] shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-4 py-2 border-b border-[#272B3A]">
-                    <p className="text-xs font-semibold text-[#F8FAFC] truncate">
-                      {currentUser.displayName}
-                    </p>
-                    <p className="text-[11px] text-[#858B9B] truncate">{currentUser.email}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleLinkClick('watchlist')}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
-                  >
-                    <Bookmark className="w-3.5 h-3.5 text-[#38BDF8]" />
-                    <span>Watchlist</span>
-                    {watchlistCount > 0 && (
-                      <span className="ml-auto text-[10px] text-[#858B9B] font-mono">
-                        {watchlistCount}
-                      </span>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => handleLinkClick('favorites')}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
-                  >
-                    <Heart className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Favourites</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleLinkClick('account')}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
-                  >
-                    <User className="w-3.5 h-3.5 text-[#858B9B]" />
-                    <span>Preferences & Profile</span>
-                  </button>
-
-                  {currentUser.isAdmin && (
-                    <button
-                      onClick={() => handleLinkClick('admin')}
-                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-amber-300 hover:text-amber-200 hover:bg-[#191D2B] text-left transition-colors cursor-pointer border-t border-[#272B3A] mt-1 pt-2"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
-                      <span>Admin Console</span>
-                    </button>
-                  )}
-
-                  <div className="border-t border-[#272B3A] mt-1 pt-1">
-                    <button
-                      onClick={() => {
-                        setUserDropdownOpen(false);
-                        onSignOut();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-rose-400 hover:bg-rose-500/10 text-left transition-colors cursor-pointer"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
-          ) : (
-            <button
-              onClick={onOpenAuth}
-              className="px-3.5 py-1.5 text-xs font-medium text-white bg-[#8B5CF6] hover:bg-[#7C3AED] rounded-lg transition-colors cursor-pointer shadow-sm shadow-[#8B5CF6]/20 whitespace-nowrap shrink-0"
-            >
-              Sign In
-            </button>
-          )}
-
-          {/* Mobile Menu Hamburger Toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[#A1A1AA] hover:text-[#F8FAFC] focus:outline-none"
-            aria-label="Toggle mobile menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-b border-[#272B3A] bg-[#080A12] px-4 pt-2 pb-4 space-y-1">
-          {navLinks.map((link) => (
-            <button
-              key={link.id}
-              onClick={() => handleLinkClick(link.id)}
-              className={`block w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                currentView === link.id
-                  ? 'bg-[#191D2B] text-[#F8FAFC]'
-                  : 'text-[#A1A1AA] hover:bg-[#111421] hover:text-[#F8FAFC]'
+            <span
+              className={`text-[10px] sm:text-[11px] font-medium tracking-tight mt-1 max-w-full truncate ${
+                currentView === 'account' ? 'text-[#F8FAFC]' : 'text-[#858B9B]'
               }`}
             >
-              {link.label}
-            </button>
-          ))}
-          {currentUser?.isAdmin && (
-            <button
-              onClick={() => handleLinkClick('admin')}
-              className="block w-full text-left px-3 py-2 text-sm font-medium text-amber-300 hover:bg-[#191D2B] rounded-md"
-            >
-              Admin Console
-            </button>
-          )}
-          <button
-            onClick={() => {
-              onOpenShare();
-              setMobileMenuOpen(false);
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#38BDF8] hover:bg-[#191D2B] rounded-md transition-colors"
-          >
-            <Smartphone className="w-4 h-4" />
-            <span>Mobile App & QR Code</span>
+              {t('nav.watchlist')}
+            </span>
+            {currentView === 'account' && (
+              <span
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-[#8B5CF6]"
+                aria-hidden="true"
+              />
+            )}
           </button>
         </div>
-      )}
-    </header>
+      </nav>
+    </>
   );
 };

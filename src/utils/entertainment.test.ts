@@ -1,184 +1,483 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  formatRating,
-  formatRuntime,
-  formatReleaseYear,
   filterMedia,
   sortMedia,
-  calculateRecommendationScore,
-  calculateCommunityRating
-} from './entertainment';
-import { MediaItem, UserReview } from '../types/entertainment';
+  sortReviews,
+  findSimilarMedia,
+  getScopedStorageKey,
+  calculateCommunityRating,
+  extractCatalogFacets,
+  getPersonalizedRecommendations,
+  generateArticleSlug,
+  resolveAutoplayTrailersPreference,
+  shouldAutoplayCardTrailer,
+  buildCardTrailerEmbedUrl,
+  getTodayIsoDate,
+  isUpcomingReleaseDate,
+  getUpcomingMediaItems
+} from './entertainment.ts';
+import type { MediaItem, UserReview, WatchlistItem } from '../types/entertainment.ts';
 
-const mockItems: MediaItem[] = [
+const SAMPLE_MEDIA: MediaItem[] = [
   {
     id: 1,
-    title: 'Dune: Part Two',
-    overview: 'Paul Atreides unites with Chani and Fremen',
+    title: 'Solaris Echo',
+    overview: 'A deep space psychological drama.',
     mediaType: 'movie',
-    releaseDate: '2024-03-01',
-    posterPath: '/path1.jpg',
-    backdropPath: '/back1.jpg',
-    voteAverage: 8.2,
-    voteCount: 5000,
-    genres: ['Science Fiction', 'Adventure'],
-    runtime: 166
+    releaseDate: '2024-04-12',
+    posterPath: '/p1.jpg',
+    backdropPath: '/b1.jpg',
+    voteAverage: 8.6,
+    voteCount: 4200,
+    genres: ['Science Fiction', 'Drama'],
+    cast: [{ id: 10, name: 'Rebecca Ferguson', character: 'Dr. Vance' }],
+    similarIds: [3]
   },
   {
     id: 2,
-    title: 'Severance',
-    overview: 'Office workers memories are surgically divided',
+    title: 'Midnight Signal',
+    overview: 'Broadcast mystery in a snowy town.',
     mediaType: 'tv',
-    firstAirDate: '2022-02-18',
-    posterPath: '/path2.jpg',
-    backdropPath: '/back2.jpg',
-    voteAverage: 8.4,
-    voteCount: 1400,
-    genres: ['Drama', 'Mystery', 'Science Fiction'],
-    numberOfSeasons: 2
+    firstAirDate: '2023-11-02',
+    posterPath: '/p2.jpg',
+    backdropPath: '/b2.jpg',
+    voteAverage: 7.9,
+    voteCount: 1800,
+    genres: ['Mystery', 'Thriller']
   },
   {
     id: 3,
-    title: 'Oppenheimer',
-    overview: 'The story of J. Robert Oppenheimer and the Manhattan project',
+    title: 'Orbital Horizon',
+    overview: 'Orbital station engineers face solar flare.',
     mediaType: 'movie',
-    releaseDate: '2023-07-21',
-    posterPath: '/path3.jpg',
-    backdropPath: '/back3.jpg',
+    releaseDate: '2022-08-20',
+    posterPath: '/p3.jpg',
+    backdropPath: '/b3.jpg',
     voteAverage: 8.1,
-    voteCount: 8000,
-    genres: ['Drama', 'History'],
-    runtime: 180
+    voteCount: 3100,
+    genres: ['Science Fiction', 'Adventure']
+  },
+  {
+    id: 4,
+    title: 'Alps Chronicle',
+    overview: 'Historical mountaineering journey.',
+    mediaType: 'movie',
+    releaseDate: '2024-01-15',
+    posterPath: '/p4.jpg',
+    backdropPath: '/b4.jpg',
+    voteAverage: 7.2,
+    voteCount: 900,
+    genres: ['History', 'Drama']
   }
 ];
 
-test('formatRating handles valid, zero, and missing ratings', () => {
-  assert.equal(formatRating(8.24), '8.2');
-  assert.equal(formatRating(9), '9.0');
-  assert.equal(formatRating(0), 'NR');
-  assert.equal(formatRating(undefined), 'NR');
-  assert.equal(formatRating(null), 'NR');
+const SAMPLE_REVIEWS: UserReview[] = [
+  {
+    id: 'r1',
+    userId: 'u1',
+    userName: 'Elena',
+    mediaId: 1,
+    mediaType: 'movie',
+    rating: 7,
+    reviewText: 'Measured pacing and stark visuals.',
+    status: 'published',
+    createdAt: '2025-01-10T10:00:00.000Z',
+    helpfulCount: 12
+  },
+  {
+    id: 'r2',
+    userId: 'u2',
+    userName: 'Marcus',
+    mediaId: 1,
+    mediaType: 'movie',
+    rating: 10,
+    reviewText: 'Masterful sound design throughout.',
+    status: 'published',
+    createdAt: '2025-03-15T10:00:00.000Z',
+    helpfulCount: 3
+  },
+  {
+    id: 'r3',
+    userId: 'u3',
+    userName: 'Nadia',
+    mediaId: 1,
+    mediaType: 'movie',
+    rating: 8,
+    reviewText: 'Compelling lead performance.',
+    status: 'published',
+    createdAt: '2025-02-01T10:00:00.000Z',
+    helpfulCount: 25
+  }
+];
+
+test('filterMedia filters by type, genre, year, minRating, and searchQuery including cast', () => {
+  assert.equal(filterMedia(SAMPLE_MEDIA, { type: 'tv' }).length, 1);
+  assert.equal(filterMedia(SAMPLE_MEDIA, { genre: 'Science Fiction' }).length, 2);
+  assert.equal(filterMedia(SAMPLE_MEDIA, { year: '2024' }).length, 2);
+  assert.equal(filterMedia(SAMPLE_MEDIA, { minRating: 8.0 }).length, 2);
+  assert.deepEqual(
+    filterMedia(SAMPLE_MEDIA, { searchQuery: 'Ferguson' }).map((m) => m.id),
+    [1]
+  );
 });
 
-test('formatRuntime handles hours and minutes accurately', () => {
-  assert.equal(formatRuntime(166), '2h 46m');
-  assert.equal(formatRuntime(120), '2h');
-  assert.equal(formatRuntime(45), '45m');
-  assert.equal(formatRuntime(0), 'Runtime unavailable');
-  assert.equal(formatRuntime(null), 'Runtime unavailable');
+test('sortMedia orders items deterministically across sort options', () => {
+  assert.deepEqual(
+    sortMedia(SAMPLE_MEDIA, 'vote_average.desc').map((m) => m.id),
+    [1, 3, 2, 4]
+  );
+  assert.deepEqual(
+    sortMedia(SAMPLE_MEDIA, 'title.asc').map((m) => m.id),
+    [4, 2, 3, 1]
+  );
+  assert.deepEqual(
+    sortMedia(SAMPLE_MEDIA, 'primary_release_date.desc').map((m) => m.id),
+    [1, 4, 2, 3]
+  );
 });
 
-test('formatReleaseYear extracts 4-digit year from ISO date strings', () => {
-  assert.equal(formatReleaseYear('2024-03-01'), '2024');
-  assert.equal(formatReleaseYear('2022-02-18'), '2022');
-  assert.equal(formatReleaseYear(null), 'TBA');
-  assert.equal(formatReleaseYear(''), 'TBA');
+test('sortReviews sorts by newest, most helpful, and highest rated without mutating input', () => {
+  const originalOrder = SAMPLE_REVIEWS.map((r) => r.id);
+  assert.deepEqual(
+    sortReviews(SAMPLE_REVIEWS, 'newest').map((r) => r.id),
+    ['r2', 'r3', 'r1']
+  );
+  assert.deepEqual(
+    sortReviews(SAMPLE_REVIEWS, 'helpful').map((r) => r.id),
+    ['r3', 'r1', 'r2']
+  );
+  assert.deepEqual(
+    sortReviews(SAMPLE_REVIEWS, 'rating_desc').map((r) => r.id),
+    ['r2', 'r3', 'r1']
+  );
+  assert.deepEqual(
+    SAMPLE_REVIEWS.map((r) => r.id),
+    originalOrder
+  );
 });
 
-test('filterMedia filters by mediaType accurately', () => {
-  const movies = filterMedia(mockItems, { type: 'movie' });
-  assert.equal(movies.length, 2);
-  assert.ok(movies.every((m) => m.mediaType === 'movie'));
-
-  const tv = filterMedia(mockItems, { type: 'tv' });
-  assert.equal(tv.length, 1);
-  assert.equal(tv[0].title, 'Severance');
+test('findSimilarMedia ranks explicit similarIds and shared genres while excluding target', () => {
+  const similar = findSimilarMedia(SAMPLE_MEDIA[0], SAMPLE_MEDIA, 2);
+  assert.equal(similar.length, 2);
+  assert.equal(similar[0].id, 3); // explicit similarId + Science Fiction + movie
+  assert.equal(similar.some((m) => m.id === 1), false);
 });
 
-test('filterMedia filters by genre', () => {
-  const scifi = filterMedia(mockItems, { genre: 'Science Fiction' });
-  assert.equal(scifi.length, 2);
-
-  const history = filterMedia(mockItems, { genre: 'History' });
-  assert.equal(history.length, 1);
-  assert.equal(history[0].title, 'Oppenheimer');
-});
-
-test('filterMedia filters by year and minimum rating', () => {
-  const filtered = filterMedia(mockItems, { year: '2024', minRating: 8.0 });
-  assert.equal(filtered.length, 1);
-  assert.equal(filtered[0].title, 'Dune: Part Two');
-});
-
-test('filterMedia performs case-insensitive text search across fields', () => {
-  const result1 = filterMedia(mockItems, { searchQuery: 'oppenheimer' });
-  assert.equal(result1.length, 1);
-  assert.equal(result1[0].title, 'Oppenheimer');
-
-  const result2 = filterMedia(mockItems, { searchQuery: 'fremen' });
-  assert.equal(result2.length, 1);
-  assert.equal(result2[0].title, 'Dune: Part Two');
-});
-
-test('sortMedia sorts correctly by rating and release date', () => {
-  const byRating = sortMedia(mockItems, 'vote_average.desc');
-  assert.equal(byRating[0].title, 'Severance'); // 8.4
-  assert.equal(byRating[1].title, 'Dune: Part Two'); // 8.2
-  assert.equal(byRating[2].title, 'Oppenheimer'); // 8.1
-
-  const byDate = sortMedia(mockItems, 'primary_release_date.desc');
-  assert.equal(byDate[0].title, 'Dune: Part Two'); // 2024
-  assert.equal(byDate[1].title, 'Oppenheimer'); // 2023
-  assert.equal(byDate[2].title, 'Severance'); // 2022
-});
-
-test('calculateRecommendationScore ranks titles by user genre preferences', () => {
-  const item = mockItems[0]; // Dune (Sci-Fi, Adventure)
-  const baseScore = calculateRecommendationScore(item, [], {});
-  assert.equal(baseScore, 82); // 8.2 * 10
-
-  const preferredScore = calculateRecommendationScore(item, ['Science Fiction'], { Adventure: 2 });
-  // Base 82 + 25 (preferred SciFi) + 20 (Adventure x 2) = 127
-  assert.equal(preferredScore, 127);
-});
-
-test('calculateCommunityRating computes community averages and handles empty list', () => {
-  const empty = calculateCommunityRating([]);
-  assert.equal(empty.count, 0);
-  assert.equal(empty.formatted, 'No reviews yet');
-
-  const mockReviews: UserReview[] = [
+test('calculateCommunityRating ignores flagged reviews', () => {
+  const stats = calculateCommunityRating([
+    ...SAMPLE_REVIEWS,
     {
-      id: 'r1',
-      userId: 'u1',
-      userName: 'Alice',
-      mediaId: 1,
-      mediaType: 'movie',
-      rating: 10,
-      reviewText: 'Masterpiece',
-      status: 'published',
-      createdAt: '2024-01-01',
-      helpfulCount: 5
-    },
+      ...SAMPLE_REVIEWS[0],
+      id: 'flagged-1',
+      rating: 1,
+      status: 'flagged'
+    }
+  ]);
+  assert.equal(stats.count, 3);
+  assert.equal(stats.formatted, '8.3/10');
+});
+
+test('getScopedStorageKey isolates signed-in users from guest cache', () => {
+  assert.equal(getScopedStorageKey('astreon_watchlist', 'uid-123'), 'astreon_watchlist_uid-123');
+  assert.equal(getScopedStorageKey('astreon_watchlist', null), 'astreon_watchlist_guest');
+  assert.equal(getScopedStorageKey('astreon_watchlist', undefined), 'astreon_watchlist_guest');
+});
+
+test('extractCatalogFacets derives unique sorted genres and descending years', () => {
+  const facets = extractCatalogFacets(SAMPLE_MEDIA);
+  assert.deepEqual(facets.years, ['2024', '2023', '2022']);
+  assert.deepEqual(facets.genres, [
+    'Adventure',
+    'Drama',
+    'History',
+    'Mystery',
+    'Science Fiction',
+    'Thriller'
+  ]);
+});
+
+test('getPersonalizedRecommendations prioritizes preferred genres and watchlist affinity', () => {
+  const mockWatchlist: WatchlistItem[] = [
     {
-      id: 'r2',
-      userId: 'u2',
-      userName: 'Bob',
-      mediaId: 1,
-      mediaType: 'movie',
-      rating: 8,
-      reviewText: 'Great film',
-      status: 'published',
-      createdAt: '2024-01-02',
-      helpfulCount: 2
-    },
+      id: 'w1',
+      mediaId: 99,
+      mediaType: 'tv',
+      title: 'Mystery Show',
+      posterPath: '/w.jpg',
+      voteAverage: 8.0,
+      genres: ['Mystery', 'Thriller'],
+      addedAt: '2025-01-01T00:00:00Z'
+    }
+  ];
+  const ranked = getPersonalizedRecommendations(SAMPLE_MEDIA, ['Mystery', 'Thriller'], mockWatchlist);
+  assert.equal(ranked[0].id, 2);
+});
+
+test('findSimilarMedia allows a TV show with the same numeric ID as target movie', () => {
+  const tvCollision: MediaItem = {
+    id: 1,
+    title: 'Solaris Series',
+    overview: 'Series adaptation.',
+    mediaType: 'tv',
+    firstAirDate: '2025-01-01',
+    posterPath: '/tv.jpg',
+    backdropPath: '/tvb.jpg',
+    voteAverage: 8.4,
+    voteCount: 1500,
+    genres: ['Science Fiction', 'Drama']
+  };
+  const similar = findSimilarMedia(SAMPLE_MEDIA[0], [...SAMPLE_MEDIA, tvCollision], 4);
+  assert.equal(similar.some((m) => m.id === 1 && m.mediaType === 'tv'), true);
+  assert.equal(similar.some((m) => m.id === 1 && m.mediaType === 'movie'), false);
+});
+
+test('generateArticleSlug handles punctuation, diacritics, non-Latin titles, and duplicates', () => {
+  assert.equal(generateArticleSlug('Cinéma & Lumière: 2025!'), 'cinema-lumiere-2025');
+  assert.equal(generateArticleSlug('???', undefined, 'art-99'), 'art-99');
+  assert.equal(
+    generateArticleSlug('Dune Review', ['dune-review', 'dune-review-2']),
+    'dune-review-3'
+  );
+});
+
+test('filterMedia maps compound TV and movie genre aliases bidirectionally', () => {
+  const mixed: MediaItem[] = [
+    ...SAMPLE_MEDIA,
     {
-      id: 'r3',
-      userId: 'u3',
-      userName: 'Charlie',
-      mediaId: 1,
-      mediaType: 'movie',
-      rating: 4,
-      reviewText: 'Flagged review',
-      status: 'flagged',
-      createdAt: '2024-01-03',
-      helpfulCount: 0
+      id: 100,
+      title: 'Starbound',
+      overview: 'TV sci-fi epic.',
+      mediaType: 'tv',
+      firstAirDate: '2025-02-01',
+      posterPath: '/tv100.jpg',
+      backdropPath: '/tv100b.jpg',
+      voteAverage: 8.5,
+      voteCount: 900,
+      genres: ['Sci-Fi & Fantasy', 'Action & Adventure']
     }
   ];
 
-  const commRating = calculateCommunityRating(mockReviews);
-  assert.equal(commRating.count, 2); // Excludes flagged
-  assert.equal(commRating.average, 9.0); // (10 + 8) / 2
-  assert.equal(commRating.formatted, '9.0/10');
+  // Selecting Science Fiction or Action includes TV items tagged Sci-Fi & Fantasy / Action & Adventure
+  assert.equal(filterMedia(mixed, { type: 'tv', genre: 'Science Fiction' }).length, 1);
+  assert.equal(filterMedia(mixed, { type: 'tv', genre: 'Action' }).length, 1);
+  assert.equal(filterMedia(mixed, { type: 'tv', genre: 'Adventure' }).length, 1);
+  // Selecting Sci-Fi & Fantasy includes Movie items tagged Science Fiction
+  assert.equal(filterMedia(mixed, { type: 'movie', genre: 'Sci-Fi & Fantasy' }).length, 2);
 });
+
+test('resolveAutoplayTrailersPreference respects explicit user preference, local fallback, and defaults to true', () => {
+  assert.equal(resolveAutoplayTrailersPreference(null, null), true);
+  assert.equal(resolveAutoplayTrailersPreference(undefined, 'false'), false);
+  assert.equal(resolveAutoplayTrailersPreference(undefined, 'true'), true);
+  assert.equal(
+    resolveAutoplayTrailersPreference({ playbackPreferences: { autoplayTrailers: false } }, 'true'),
+    false
+  );
+  assert.equal(
+    resolveAutoplayTrailersPreference({ playbackPreferences: { autoplayTrailers: true } }, 'false'),
+    true
+  );
+});
+
+test('shouldAutoplayCardTrailer blocks auto-play when data-saving setting is off, offline, unhovered, missing trailer, or reduced motion', () => {
+  assert.equal(
+    shouldAutoplayCardTrailer({
+      autoplayEnabled: true,
+      isOnline: true,
+      isHovered: true,
+      hasTrailer: true,
+      prefersReducedMotion: false
+    }),
+    true
+  );
+  assert.equal(
+    shouldAutoplayCardTrailer({
+      autoplayEnabled: false,
+      isOnline: true,
+      isHovered: true,
+      hasTrailer: true
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoplayCardTrailer({
+      autoplayEnabled: true,
+      isOnline: false,
+      isHovered: true,
+      hasTrailer: true
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoplayCardTrailer({
+      autoplayEnabled: true,
+      isOnline: true,
+      isHovered: false,
+      hasTrailer: true
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoplayCardTrailer({
+      autoplayEnabled: true,
+      isOnline: true,
+      isHovered: true,
+      hasTrailer: false
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoplayCardTrailer({
+      autoplayEnabled: true,
+      isOnline: true,
+      isHovered: true,
+      hasTrailer: true,
+      prefersReducedMotion: true
+    }),
+    false
+  );
+});
+
+test('buildCardTrailerEmbedUrl formats muted privacy-enhanced embed parameters safely', () => {
+  const url = buildCardTrailerEmbedUrl(' Way9NxDvP_k ');
+  assert.equal(
+    url,
+    'https://www.youtube-nocookie.com/embed/Way9NxDvP_k?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=Way9NxDvP_k'
+  );
+});
+
+test('isUpcomingReleaseDate validates strictly future YYYY-MM-DD dates and rejects invalid or past dates', () => {
+  const ref = '2026-11-15';
+  assert.equal(isUpcomingReleaseDate('2026-11-16', ref), true);
+  assert.equal(isUpcomingReleaseDate('2027-02-01', ref), true);
+  assert.equal(isUpcomingReleaseDate('2026-11-15', ref), false);
+  assert.equal(isUpcomingReleaseDate('2026-11-14', ref), false);
+  assert.equal(isUpcomingReleaseDate('2026-02-30', ref), false);
+  assert.equal(isUpcomingReleaseDate('2027', ref), false);
+  assert.equal(isUpcomingReleaseDate('', ref), false);
+  assert.equal(isUpcomingReleaseDate(null, ref), false);
+  assert.match(getTodayIsoDate(new Date('2026-11-15T23:59:59Z')), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('getUpcomingMediaItems filters future movies and series, deduplicates, and sorts chronologically ascending', () => {
+  const ref = '2026-11-15';
+  const catalog: MediaItem[] = [
+    ...SAMPLE_MEDIA,
+    {
+      id: 501,
+      title: 'Later Series',
+      overview: 'Upcoming sci-fi series',
+      mediaType: 'tv',
+      firstAirDate: '2027-03-10',
+      posterPath: '/tv501.jpg',
+      backdropPath: '',
+      voteAverage: 0,
+      voteCount: 0,
+      genres: ['Drama']
+    },
+    {
+      id: 502,
+      title: 'Sooner Movie',
+      overview: 'Upcoming December premiere',
+      mediaType: 'movie',
+      releaseDate: '2026-12-20',
+      posterPath: '/m502.jpg',
+      backdropPath: '',
+      voteAverage: 0,
+      voteCount: 0,
+      genres: ['Adventure']
+    },
+    {
+      id: 502,
+      title: 'Sooner Movie',
+      overview: 'Duplicate entry without poster',
+      mediaType: 'movie',
+      releaseDate: '2026-12-20',
+      posterPath: '',
+      backdropPath: '',
+      voteAverage: 0,
+      voteCount: 0,
+      genres: ['Adventure']
+    },
+    {
+      id: 503,
+      title: 'Today Release',
+      overview: 'Already releasing today',
+      mediaType: 'movie',
+      releaseDate: '2026-11-15',
+      posterPath: '/m503.jpg',
+      backdropPath: '',
+      voteAverage: 7.5,
+      voteCount: 100,
+      genres: ['Drama']
+    },
+    {
+      id: 504,
+      title: 'January Series',
+      overview: 'Winter premiere series',
+      mediaType: 'tv',
+      firstAirDate: '2027-01-08',
+      posterPath: '/tv504.jpg',
+      backdropPath: '',
+      voteAverage: 0,
+      voteCount: 0,
+      genres: ['Mystery']
+    }
+  ];
+
+  const upcoming = getUpcomingMediaItems(catalog, ref);
+  assert.deepEqual(
+    upcoming.map((m) => `${m.mediaType}:${m.id}`),
+    ['movie:502', 'tv:504', 'tv:501']
+  );
+  assert.equal(upcoming[0].posterPath, '/m502.jpg');
+});
+
+test('getPersonalizedRecommendations incorporates watchHistory genre affinity and converts history entries', async () => {
+  const { watchHistoryToMediaItems } = await import('./entertainment.ts');
+  const history = [
+    {
+      id: 'movie-999',
+      mediaId: 999,
+      mediaType: 'movie' as const,
+      title: 'Past History Pick',
+      posterPath: '/hist.jpg',
+      voteAverage: 8.0,
+      genres: ['History', 'Drama'],
+      viewedAt: '2026-11-14T00:00:00Z'
+    },
+    {
+      id: 'movie-998',
+      mediaId: 998,
+      mediaType: 'movie' as const,
+      title: 'Past History Pick 2',
+      posterPath: '/hist2.jpg',
+      voteAverage: 7.8,
+      genres: ['History', 'Drama'],
+      viewedAt: '2026-11-13T00:00:00Z'
+    },
+    {
+      id: 'movie-997',
+      mediaId: 997,
+      mediaType: 'movie' as const,
+      title: 'Past History Pick 3',
+      posterPath: '/hist3.jpg',
+      voteAverage: 7.7,
+      genres: ['History', 'Drama'],
+      viewedAt: '2026-11-12T00:00:00Z'
+    }
+  ];
+
+  // History + Drama affinity boosts History/Drama film above lower-history items when preferredGenres is neutral
+  const ranked = getPersonalizedRecommendations(SAMPLE_MEDIA, [], [], history);
+  assert.equal(ranked[0].id, 4);
+
+  const converted = watchHistoryToMediaItems(history, SAMPLE_MEDIA);
+  assert.equal(converted.length, 3);
+  assert.equal(converted[0].mediaType, 'movie');
+  assert.equal(converted[0].title, 'Past History Pick');
+});
+
+
+

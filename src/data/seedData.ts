@@ -1,4 +1,4 @@
-import { MediaItem, NewsArticle, UserReview, AdminAuditLog } from '../types/entertainment';
+import type { MediaItem, NewsArticle, UserReview, AdminAuditLog } from '../types/entertainment.ts';
 
 export const INITIAL_FEATURED_ID = 693134; // Dune: Part Two
 
@@ -11,7 +11,7 @@ export const SEED_MEDIA: MediaItem[] = [
     mediaType: 'movie',
     releaseDate: '2024-03-01',
     posterPath: 'https://image.tmdb.org/t/p/w780/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-    backdropPath: '/src/assets/images/hero_dune_cinema_1793737311007.jpg',
+    backdropPath: '/assets/images/hero_dune_cinema_1793737311007.jpg',
     voteAverage: 8.2,
     voteCount: 5410,
     genres: ['Science Fiction', 'Adventure', 'Drama'],
@@ -21,11 +21,11 @@ export const SEED_MEDIA: MediaItem[] = [
     featured: true,
     cast: [
       { id: 1190668, name: 'Timothée Chalamet', character: 'Paul Atreides', profilePath: 'https://image.tmdb.org/t/p/w185/BE2sdjpgsa2rNTFa66f7upkaOP.jpg' },
-      { id: 505710, name: 'Zendaya', character: 'Chani', profilePath: 'https://image.tmdb.org/t/p/w185/r3A7drrtun9KVIEVECQFAhwipie.jpg' },
-      { id: 932967, name: 'Rebecca Ferguson', character: 'Lady Jessica', profilePath: 'https://image.tmdb.org/t/p/w185/4TGee99hU7A0iC7YhW8Zz9oO16r.jpg' },
-      { id: 1373737, name: 'Florence Pugh', character: 'Princess Irulan', profilePath: 'https://image.tmdb.org/t/p/w185/87T2w9w7g2wS91c015Q14e4kH3J.jpg' },
-      { id: 1475782, name: 'Austin Butler', character: 'Feyd-Rautha', profilePath: 'https://image.tmdb.org/t/p/w185/2q4k90q4K9l9z9Z9Q3o9q9Z9Q3o.jpg' },
-      { id: 3894, name: 'Javier Bardem', character: 'Stilgar', profilePath: 'https://image.tmdb.org/t/p/w185/wM2oB5X111P0tE61vM64e9a0N3c.jpg' }
+      { id: 505710, name: 'Zendaya', character: 'Chani' },
+      { id: 932967, name: 'Rebecca Ferguson', character: 'Lady Jessica' },
+      { id: 1373737, name: 'Florence Pugh', character: 'Princess Irulan' },
+      { id: 1475782, name: 'Austin Butler', character: 'Feyd-Rautha' },
+      { id: 3894, name: 'Javier Bardem', character: 'Stilgar' }
     ],
     crew: [
       { id: 137427, name: 'Denis Villeneuve', job: 'Director', department: 'Directing' },
@@ -37,9 +37,9 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v2', key: 'U2Qp5pL38RE', name: 'Official Trailer 2', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 1899, providerName: 'Max', logoPath: 'https://image.tmdb.org/t/p/w92/Ajqyt5GhGFOXnykrUIZXSKAcqEZ.jpg', type: 'flatrate', link: 'https://www.max.com' },
+      { providerId: 1899, providerName: 'Max', type: 'flatrate', link: 'https://www.max.com' },
       { providerId: 2, providerName: 'Apple TV', logoPath: 'https://image.tmdb.org/t/p/w92/peURlLlr8jggOwK53fJ5wdQl05y.jpg', type: 'rent', link: 'https://tv.apple.com' },
-      { providerId: 3, providerName: 'Amazon Video', logoPath: 'https://image.tmdb.org/t/p/w92/tbEd6QKjh85IflAcIsbbtAYas6K.jpg', type: 'rent', link: 'https://www.primevideo.com' }
+      { providerId: 3, providerName: 'Amazon Video', type: 'rent', link: 'https://www.primevideo.com' }
     ],
     similarIds: [157336, 872585, 438631]
   },
@@ -59,10 +59,10 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Released',
     tagline: 'The world forever changes.',
     cast: [
-      { id: 2037, name: 'Cillian Murphy', character: 'J. Robert Oppenheimer', profilePath: 'https://image.tmdb.org/t/p/w185/dm6B8mK9oV76lM7c9uL4w3z1234.jpg' },
-      { id: 5081, name: 'Emily Blunt', character: 'Katherine Oppenheimer', profilePath: 'https://image.tmdb.org/t/p/w185/nPJXaRMVUvgmnWzkoi3Pwh57oN2.jpg' },
-      { id: 1892, name: 'Matt Damon', character: 'Leslie Groves', profilePath: 'https://image.tmdb.org/t/p/w185/elSlNgV8xVifsbHpF2jAv007TeD.jpg' },
-      { id: 3223, name: 'Robert Downey Jr.', character: 'Lewis Strauss', profilePath: 'https://image.tmdb.org/t/p/w185/5qHNjhtjMD4YWH3vi0lZiq1RJso.jpg' }
+      { id: 2037, name: 'Cillian Murphy', character: 'J. Robert Oppenheimer' },
+      { id: 5081, name: 'Emily Blunt', character: 'Katherine Oppenheimer' },
+      { id: 1892, name: 'Matt Damon', character: 'Leslie Groves' },
+      { id: 3223, name: 'Robert Downey Jr.', character: 'Lewis Strauss' }
     ],
     crew: [
       { id: 525, name: 'Christopher Nolan', job: 'Director', department: 'Directing' },
@@ -92,9 +92,9 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Released',
     tagline: 'Mankind was born on Earth. It was never meant to die here.',
     cast: [
-      { id: 10297, name: 'Matthew McConaughey', character: 'Joseph Cooper', profilePath: 'https://image.tmdb.org/t/p/w185/sY2mwpafcwqyYS1siiSu19IviGL.jpg' },
-      { id: 1813, name: 'Anne Hathaway', character: 'Amelia Brand', profilePath: 'https://image.tmdb.org/t/p/w185/tLKit59z0twamXmmNtHNvP3t4zH.jpg' },
-      { id: 83002, name: 'Jessica Chastain', character: 'Murphy Cooper', profilePath: 'https://image.tmdb.org/t/p/w185/Arx14yR4X4K0O9N8z9V674.jpg' }
+      { id: 10297, name: 'Matthew McConaughey', character: 'Joseph Cooper' },
+      { id: 1813, name: 'Anne Hathaway', character: 'Amelia Brand' },
+      { id: 83002, name: 'Jessica Chastain', character: 'Murphy Cooper' }
     ],
     crew: [
       { id: 525, name: 'Christopher Nolan', job: 'Director', department: 'Directing' },
@@ -104,7 +104,7 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v4', key: 'zSWdZVtXT7E', name: 'Official Trailer 3', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 1899, providerName: 'Paramount+', logoPath: 'https://image.tmdb.org/t/p/w92/Ajqyt5GhGFOXnykrUIZXSKAcqEZ.jpg', type: 'flatrate', link: 'https://paramountplus.com' }
+      { providerId: 1899, providerName: 'Paramount+', type: 'flatrate', link: 'https://paramountplus.com' }
     ]
   },
   {
@@ -115,7 +115,7 @@ export const SEED_MEDIA: MediaItem[] = [
     mediaType: 'movie',
     releaseDate: '2017-10-04',
     posterPath: 'https://image.tmdb.org/t/p/w780/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg',
-    backdropPath: '/src/assets/images/hero_scifi_cyberpunk_1793737313682.jpg',
+    backdropPath: '/assets/images/hero_scifi_cyberpunk_1793737313682.jpg',
     voteAverage: 8.0,
     voteCount: 13200,
     genres: ['Science Fiction', 'Mystery', 'Drama'],
@@ -123,9 +123,9 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Released',
     tagline: 'There are still pages left in this story.',
     cast: [
-      { id: 30614, name: 'Ryan Gosling', character: 'Officer K', profilePath: 'https://image.tmdb.org/t/p/w185/lyUyARhasjqffZXebvALbC9v1.jpg' },
-      { id: 3, name: 'Harrison Ford', character: 'Rick Deckard', profilePath: 'https://image.tmdb.org/t/p/w185/7C3ZQGdB7f0P.jpg' },
-      { id: 224513, name: 'Ana de Armas', character: 'Joi', profilePath: 'https://image.tmdb.org/t/p/w185/3vxvsmYp7m.jpg' }
+      { id: 30614, name: 'Ryan Gosling', character: 'Officer K' },
+      { id: 3, name: 'Harrison Ford', character: 'Rick Deckard' },
+      { id: 224513, name: 'Ana de Armas', character: 'Joi' }
     ],
     crew: [
       { id: 137427, name: 'Denis Villeneuve', job: 'Director', department: 'Directing' },
@@ -135,18 +135,18 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v5', key: 'gCcx85zbxz4', name: 'Official Trailer', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 1899, providerName: 'Max', logoPath: 'https://image.tmdb.org/t/p/w92/Ajqyt5GhGFOXnykrUIZXSKAcqEZ.jpg', type: 'flatrate', link: 'https://max.com' }
+      { providerId: 1899, providerName: 'Max', type: 'flatrate', link: 'https://max.com' }
     ]
   },
   {
-    id: 115959,
+    id: 95396,
     title: 'Severance',
     originalTitle: 'Severance',
     overview: 'Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives. When a mysterious colleague appears outside of work, it begins a journey to discover the truth about their job.',
     mediaType: 'tv',
     firstAirDate: '2022-02-18',
-    posterPath: 'https://image.tmdb.org/t/p/w780/jtlV9Oea0Z6d3gR00G19Kz5G7P7.jpg',
-    backdropPath: '/src/assets/images/hero_severance_series_1793737312253.jpg',
+    posterPath: 'https://image.tmdb.org/t/p/w780/pPHpeI2X1qEd1CS1SeyrdhZ4qnT.jpg',
+    backdropPath: '/assets/images/hero_severance_series_1793737312253.jpg',
     voteAverage: 8.4,
     voteCount: 1450,
     genres: ['Drama', 'Mystery', 'Science Fiction'],
@@ -155,10 +155,10 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Returning Series',
     tagline: 'Please do not adjust your screen.',
     cast: [
-      { id: 1253360, name: 'Adam Scott', character: 'Mark Scout', profilePath: 'https://image.tmdb.org/t/p/w185/aM1b038j8A1b.jpg' },
-      { id: 110996, name: 'Patricia Arquette', character: 'Harmony Cobel', profilePath: 'https://image.tmdb.org/t/p/w185/pArquette.jpg' },
-      { id: 6193, name: 'John Turturro', character: 'Irving Bailiff', profilePath: 'https://image.tmdb.org/t/p/w185/jTurturro.jpg' },
-      { id: 17419, name: 'Christopher Walken', character: 'Burt Goodman', profilePath: 'https://image.tmdb.org/t/p/w185/cWalken.jpg' }
+      { id: 1253360, name: 'Adam Scott', character: 'Mark Scout' },
+      { id: 110996, name: 'Patricia Arquette', character: 'Harmony Cobel' },
+      { id: 6193, name: 'John Turturro', character: 'Irving Bailiff' },
+      { id: 17419, name: 'Christopher Walken', character: 'Burt Goodman' }
     ],
     crew: [
       { id: 7399, name: 'Ben Stiller', job: 'Director / Executive Producer', department: 'Directing' },
@@ -179,7 +179,7 @@ export const SEED_MEDIA: MediaItem[] = [
     mediaType: 'tv',
     firstAirDate: '2024-02-27',
     posterPath: 'https://image.tmdb.org/t/p/w780/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg',
-    backdropPath: '/src/assets/images/hero_shogun_feudal_1793737313036.jpg',
+    backdropPath: '/assets/images/hero_shogun_feudal_1793737313036.jpg',
     voteAverage: 8.5,
     voteCount: 1280,
     genres: ['Drama', 'War & Politics', 'Action & Adventure'],
@@ -188,9 +188,9 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Returning Series',
     tagline: 'Honor is bought with blood.',
     cast: [
-      { id: 21694, name: 'Hiroyuki Sanada', character: 'Lord Yoshii Toranaga', profilePath: 'https://image.tmdb.org/t/p/w185/hSanada.jpg' },
-      { id: 1478701, name: 'Cosmo Jarvis', character: 'John Blackthorne', profilePath: 'https://image.tmdb.org/t/p/w185/cJarvis.jpg' },
-      { id: 1878952, name: 'Anna Sawai', character: 'Toda Mariko', profilePath: 'https://image.tmdb.org/t/p/w185/aSawai.jpg' }
+      { id: 21694, name: 'Hiroyuki Sanada', character: 'Lord Yoshii Toranaga' },
+      { id: 1478701, name: 'Cosmo Jarvis', character: 'John Blackthorne' },
+      { id: 1878952, name: 'Anna Sawai', character: 'Toda Mariko' }
     ],
     crew: [
       { id: 153018, name: 'Justin Marks', job: 'Showrunner / Creator', department: 'Writing' }
@@ -199,7 +199,7 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v7', key: 'yCMnZ24y16c', name: 'Official Trailer', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 337, providerName: 'Hulu', logoPath: 'https://image.tmdb.org/t/p/w92/Ajqyt5GhGFOXnykrUIZXSKAcqEZ.jpg', type: 'flatrate', link: 'https://www.hulu.com' },
+      { providerId: 337, providerName: 'Hulu', type: 'flatrate', link: 'https://www.hulu.com' },
       { providerId: 337, providerName: 'Disney+', logoPath: 'https://image.tmdb.org/t/p/w92/peURlLlr8jggOwK53fJ5wdQl05y.jpg', type: 'flatrate', link: 'https://disneyplus.com' }
     ]
   },
@@ -210,8 +210,8 @@ export const SEED_MEDIA: MediaItem[] = [
     overview: 'Twenty years after modern civilization has been destroyed, Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone. What starts as a small job soon becomes a brutal, heartbreaking journey.',
     mediaType: 'tv',
     firstAirDate: '2023-01-15',
-    posterPath: 'https://image.tmdb.org/t/p/w780/uKvVjHNqB5VmOrdxqMis2SYqAO4.jpg',
-    backdropPath: 'https://image.tmdb.org/t/p/original/uDgy6hyPd82kOHh6I95FLtLnj6p.jpg',
+    posterPath: 'https://image.tmdb.org/t/p/w780/dmo6TYuuJgaYinXBPjrgG9mB5od.jpg',
+    backdropPath: 'https://image.tmdb.org/t/p/original/lY2DhbA7Hy44fAKddr06UrXWWaQ.jpg',
     voteAverage: 8.6,
     voteCount: 4890,
     genres: ['Drama', 'Sci-Fi & Fantasy', 'Action & Adventure'],
@@ -220,8 +220,8 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Returning Series',
     tagline: 'When you’re lost in the darkness, look for the light.',
     cast: [
-      { id: 1253360, name: 'Pedro Pascal', character: 'Joel Miller', profilePath: 'https://image.tmdb.org/t/p/w185/pPascal.jpg' },
-      { id: 2008779, name: 'Bella Ramsey', character: 'Ellie Williams', profilePath: 'https://image.tmdb.org/t/p/w185/bRamsey.jpg' }
+      { id: 1253360, name: 'Pedro Pascal', character: 'Joel Miller' },
+      { id: 2008779, name: 'Bella Ramsey', character: 'Ellie Williams' }
     ],
     crew: [
       { id: 1224131, name: 'Craig Mazin', job: 'Creator / Writer', department: 'Writing' },
@@ -231,18 +231,18 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v8', key: 'uLtkt8BonwM', name: 'Official Teaser', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 1899, providerName: 'Max', logoPath: 'https://image.tmdb.org/t/p/w92/Ajqyt5GhGFOXnykrUIZXSKAcqEZ.jpg', type: 'flatrate', link: 'https://max.com' }
+      { providerId: 1899, providerName: 'Max', type: 'flatrate', link: 'https://max.com' }
     ]
   },
   {
-    id: 76479,
+    id: 76331,
     title: 'Succession',
     originalTitle: 'Succession',
     overview: 'The Roy family is known for controlling the biggest media and entertainment company in the world. However, their world changes when their aging father steps down from the company.',
     mediaType: 'tv',
     firstAirDate: '2018-06-03',
-    posterPath: 'https://image.tmdb.org/t/p/w780/7HdNOBvB4Y4mB4vN97.jpg',
-    backdropPath: 'https://image.tmdb.org/t/p/original/wNktdk0FvFz4f0B71g1g.jpg',
+    posterPath: 'https://image.tmdb.org/t/p/w780/z0XiwdrCQ9yVIr4O0pxzaAYRxdW.jpg',
+    backdropPath: 'https://image.tmdb.org/t/p/original/d87JXX3DLkRJMfm5StCmmnmhHuX.jpg',
     voteAverage: 8.6,
     voteCount: 2100,
     genres: ['Drama'],
@@ -251,10 +251,10 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Ended',
     tagline: 'Blood is thicker than money.',
     cast: [
-      { id: 3905, name: 'Brian Cox', character: 'Logan Roy', profilePath: 'https://image.tmdb.org/t/p/w185/bCox.jpg' },
-      { id: 55437, name: 'Jeremy Strong', character: 'Kendall Roy', profilePath: 'https://image.tmdb.org/t/p/w185/jStrong.jpg' },
-      { id: 147814, name: 'Sarah Snook', character: 'Shiv Roy', profilePath: 'https://image.tmdb.org/t/p/w185/sSnook.jpg' },
-      { id: 11115, name: 'Kieran Culkin', character: 'Roman Roy', profilePath: 'https://image.tmdb.org/t/p/w185/kCulkin.jpg' }
+      { id: 3905, name: 'Brian Cox', character: 'Logan Roy' },
+      { id: 55437, name: 'Jeremy Strong', character: 'Kendall Roy' },
+      { id: 147814, name: 'Sarah Snook', character: 'Shiv Roy' },
+      { id: 11115, name: 'Kieran Culkin', character: 'Roman Roy' }
     ],
     crew: [
       { id: 114620, name: 'Jesse Armstrong', job: 'Creator', department: 'Writing' },
@@ -264,7 +264,7 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v9', key: 'OzYxJV_rmE8', name: 'Season 4 Official Trailer', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 1899, providerName: 'Max', logoPath: 'https://image.tmdb.org/t/p/w92/Ajqyt5GhGFOXnykrUIZXSKAcqEZ.jpg', type: 'flatrate', link: 'https://max.com' }
+      { providerId: 1899, providerName: 'Max', type: 'flatrate', link: 'https://max.com' }
     ]
   },
   {
@@ -275,7 +275,7 @@ export const SEED_MEDIA: MediaItem[] = [
     mediaType: 'movie',
     releaseDate: '2024-07-26',
     posterPath: 'https://image.tmdb.org/t/p/w780/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-    backdropPath: 'https://image.tmdb.org/t/p/original/yDHYTfA3R0jFYba16jBB12teqoW.jpg',
+    backdropPath: 'https://image.tmdb.org/t/p/original/by8z9Fe8y7p4jo2YlW2SZDnptyT.jpg',
     voteAverage: 7.7,
     voteCount: 5200,
     genres: ['Action', 'Comedy', 'Science Fiction'],
@@ -283,9 +283,9 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Released',
     tagline: 'Come together.',
     cast: [
-      { id: 10859, name: 'Ryan Reynolds', character: 'Wade Wilson / Deadpool', profilePath: 'https://image.tmdb.org/t/p/w185/rReynolds.jpg' },
-      { id: 6968, name: 'Hugh Jackman', character: 'Logan / Wolverine', profilePath: 'https://image.tmdb.org/t/p/w185/hJackman.jpg' },
-      { id: 1742442, name: 'Emma Corrin', character: 'Cassandra Nova', profilePath: 'https://image.tmdb.org/t/p/w185/eCorrin.jpg' }
+      { id: 10859, name: 'Ryan Reynolds', character: 'Wade Wilson / Deadpool' },
+      { id: 6968, name: 'Hugh Jackman', character: 'Logan / Wolverine' },
+      { id: 1742442, name: 'Emma Corrin', character: 'Cassandra Nova' }
     ],
     crew: [
       { id: 17825, name: 'Shawn Levy', job: 'Director', department: 'Directing' }
@@ -313,9 +313,9 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Released',
     tagline: 'Make room for new emotions.',
     cast: [
-      { id: 32281, name: 'Amy Poehler', character: 'Joy (voice)', profilePath: 'https://image.tmdb.org/t/p/w185/aPoehler.jpg' },
-      { id: 1391587, name: 'Maya Hawke', character: 'Anxiety (voice)', profilePath: 'https://image.tmdb.org/t/p/w185/mHawke.jpg' },
-      { id: 147814, name: 'Phyllis Smith', character: 'Sadness (voice)', profilePath: 'https://image.tmdb.org/t/p/w185/pSmith.jpg' }
+      { id: 32281, name: 'Amy Poehler', character: 'Joy (voice)' },
+      { id: 1391587, name: 'Maya Hawke', character: 'Anxiety (voice)' },
+      { id: 147814, name: 'Phyllis Smith', character: 'Sadness (voice)' }
     ],
     crew: [
       { id: 148110, name: 'Kelsey Mann', job: 'Director', department: 'Directing' }
@@ -334,8 +334,8 @@ export const SEED_MEDIA: MediaItem[] = [
     overview: 'Amid the stark discord of twin cities Piltover and Zaun, two sisters fight on rival sides of a war between magic technologies and incompatible convictions.',
     mediaType: 'tv',
     firstAirDate: '2021-11-06',
-    posterPath: 'https://image.tmdb.org/t/p/w780/fqldf2t8ztc9aiwn3975.jpg',
-    backdropPath: 'https://image.tmdb.org/t/p/original/u3bZgnGQ9T01sWNhyveQz0w.jpg',
+    posterPath: 'https://image.tmdb.org/t/p/w780/87C0wecB8bHb1PsrKBI4kJiEkgV.jpg',
+    backdropPath: 'https://image.tmdb.org/t/p/original/5cvnxEHT3e39DvT6ARw4GNCFrB0.jpg',
     voteAverage: 8.7,
     voteCount: 3800,
     genres: ['Animation', 'Sci-Fi & Fantasy', 'Action & Adventure'],
@@ -344,8 +344,8 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Ended',
     tagline: 'Every legend has a beginning.',
     cast: [
-      { id: 1011904, name: 'Hailee Steinfeld', character: 'Vi (voice)', profilePath: 'https://image.tmdb.org/t/p/w185/hSteinfeld.jpg' },
-      { id: 1009138, name: 'Ella Purnell', character: 'Jinx (voice)', profilePath: 'https://image.tmdb.org/t/p/w185/ePurnell.jpg' }
+      { id: 1011904, name: 'Hailee Steinfeld', character: 'Vi (voice)' },
+      { id: 1009138, name: 'Ella Purnell', character: 'Jinx (voice)' }
     ],
     crew: [
       { id: 2474819, name: 'Christian Linke', job: 'Creator', department: 'Writing' }
@@ -354,7 +354,7 @@ export const SEED_MEDIA: MediaItem[] = [
       { id: 'v12', key: 'fXmAurh012s', name: 'Official Trailer', site: 'YouTube', type: 'Trailer', official: true }
     ],
     providers: [
-      { providerId: 8, providerName: 'Netflix', logoPath: 'https://image.tmdb.org/t/p/w92/peURlLlr8jggOwK53fJ5wdQl05y.jpg', type: 'flatrate', link: 'https://netflix.com' }
+      { providerId: 8, providerName: 'Netflix', type: 'flatrate', link: 'https://netflix.com' }
     ]
   },
   {
@@ -364,8 +364,8 @@ export const SEED_MEDIA: MediaItem[] = [
     overview: 'Eddie and Venom are on the run. Hunted by both of their worlds and with the net closing in, the duo are forced into a devastating decision that will bring the curtains down on their last dance.',
     mediaType: 'movie',
     releaseDate: '2024-10-23',
-    posterPath: 'https://image.tmdb.org/t/p/w780/k429enKu99OOEH9FjF27A.jpg',
-    backdropPath: 'https://image.tmdb.org/t/p/original/3V4kSt3qQ41.jpg',
+    posterPath: 'https://image.tmdb.org/t/p/w780/vGXptEdgZIhPg3cGlc7e8sNPC2e.jpg',
+    backdropPath: 'https://image.tmdb.org/t/p/original/3V4kLQg0kSqPLctI5ziYWabAZYF.jpg',
     voteAverage: 6.8,
     voteCount: 2200,
     genres: ['Action', 'Science Fiction', 'Adventure'],
@@ -373,8 +373,8 @@ export const SEED_MEDIA: MediaItem[] = [
     status: 'Released',
     tagline: 'Til death do they part.',
     cast: [
-      { id: 2524, name: 'Tom Hardy', character: 'Eddie Brock / Venom', profilePath: 'https://image.tmdb.org/t/p/w185/tHardy.jpg' },
-      { id: 19034, name: 'Chiwetel Ejiofor', character: 'Rex Strickland', profilePath: 'https://image.tmdb.org/t/p/w185/cEjiofor.jpg' }
+      { id: 2524, name: 'Tom Hardy', character: 'Eddie Brock / Venom' },
+      { id: 19034, name: 'Chiwetel Ejiofor', character: 'Rex Strickland' }
     ],
     crew: [
       { id: 147815, name: 'Kelly Marcel', job: 'Director', department: 'Directing' }
@@ -385,6 +385,72 @@ export const SEED_MEDIA: MediaItem[] = [
     providers: [
       { providerId: 2, providerName: 'Apple TV', logoPath: 'https://image.tmdb.org/t/p/w92/peURlLlr8jggOwK53fJ5wdQl05y.jpg', type: 'rent', link: 'https://tv.apple.com' }
     ]
+  },
+  {
+    id: 9900001,
+    title: 'Meridian Drift',
+    originalTitle: 'Meridian Drift',
+    overview: 'An orbital cartographer uncovers an impossible signal drifting beneath the ice crust of Europa, triggering a high-stakes deep-space expedition.',
+    mediaType: 'movie',
+    releaseDate: '2026-12-18',
+    posterPath: '/assets/images/hero_scifi_cyberpunk_1793737313682.jpg',
+    backdropPath: '/assets/images/hero_scifi_cyberpunk_1793737313682.jpg',
+    voteAverage: 0,
+    voteCount: 0,
+    genres: ['Science Fiction', 'Mystery'],
+    runtime: 142,
+    status: 'Post Production',
+    tagline: 'Every signal leaves an echo.'
+  },
+  {
+    id: 9900002,
+    title: 'Winter at Takayama',
+    originalTitle: 'Winter at Takayama',
+    overview: 'Across three generations of master timber architects in northern Japan, a contested restoration project unearths decades-old family secrets.',
+    mediaType: 'tv',
+    firstAirDate: '2027-01-22',
+    posterPath: '/assets/images/hero_shogun_feudal_1793737313036.jpg',
+    backdropPath: '/assets/images/hero_shogun_feudal_1793737313036.jpg',
+    voteAverage: 0,
+    voteCount: 0,
+    genres: ['Drama', 'History'],
+    numberOfSeasons: 1,
+    numberOfEpisodes: 8,
+    status: 'In Production',
+    tagline: 'Some foundations never settle.'
+  },
+  {
+    id: 9900003,
+    title: 'The Glass Consulate',
+    originalTitle: 'The Glass Consulate',
+    overview: 'When an encrypted diplomatic pouch vanishes mid-transit in Geneva, two rival intelligence archivists are forced into an uneasy 48-hour alliance.',
+    mediaType: 'tv',
+    firstAirDate: '2027-02-14',
+    posterPath: '/assets/images/hero_severance_series_1793737312253.jpg',
+    backdropPath: '/assets/images/hero_severance_series_1793737312253.jpg',
+    voteAverage: 0,
+    voteCount: 0,
+    genres: ['Thriller', 'Mystery', 'Drama'],
+    numberOfSeasons: 1,
+    numberOfEpisodes: 10,
+    status: 'In Production',
+    tagline: 'Trust is an expiring credential.'
+  },
+  {
+    id: 9900004,
+    title: 'Sirocco',
+    originalTitle: 'Sirocco',
+    overview: 'A solar-sail cargo crew navigating an uncharted dust corridor races an approaching magnetic storm across the Mediterranean basin.',
+    mediaType: 'movie',
+    releaseDate: '2027-03-26',
+    posterPath: '/assets/images/hero_dune_cinema_1793737311007.jpg',
+    backdropPath: '/assets/images/hero_dune_cinema_1793737311007.jpg',
+    voteAverage: 0,
+    voteCount: 0,
+    genres: ['Adventure', 'Science Fiction', 'Drama'],
+    runtime: 154,
+    status: 'Post Production',
+    tagline: 'Catch the wind before the sky turns.'
   }
 ];
 
@@ -396,7 +462,7 @@ export const SEED_NEWS: NewsArticle[] = [
     excerpt: 'An in-depth editorial exploring the sensory minimalism, acoustic design, and narrative discipline behind Dune: Part Two and the evolution of widescreen world-building.',
     body: `From the brutalist architecture of Giedi Prime to the sweeping desert geometry of Arrakis, Denis Villeneuve and cinematographer Greig Fraser have established a visual grammar unlike anything in contemporary cinema.\n\nRather than indulging in standard digital clutter, Dune: Part Two enforces an austere restraint. Natural light, tactile grain, and Hans Zimmer's microtonal acoustic compositions ground the cosmic scale in immediate physical dread.\n\nIn this longform retrospective, ASTREON's editorial team examines how the franchise balances ancient religious allegory with technological skepticism—and what this means for the future of authored epics in a marketplace often saturated with transient visual effects.`,
     category: 'Deep Dive',
-    image: '/src/assets/images/hero_dune_cinema_1793737311007.jpg',
+    image: '/assets/images/hero_dune_cinema_1793737311007.jpg',
     imageAlt: 'Arrakis desert horizon cinematic frame',
     author: 'Elena Vance',
     authorRole: 'Senior Film Editor',
@@ -412,7 +478,7 @@ export const SEED_NEWS: NewsArticle[] = [
     excerpt: 'With Shōgun sweeping the Emmys and Severance entering its second chapter, television is returning to meticulous historical cadence and patient conceptual tension.',
     body: `The era of rapid streaming sprawl is giving way to a deliberate return to craft. Audiences are rewarding television that demands undivided attention, cultural authenticity, and rigorous pacing.\n\nHiroyuki Sanada's historic turn as Lord Toranaga in Shōgun proved that international storytelling, when produced with uncompromised period accuracy and bilingual reverence, commands global cultural primacy.\n\nSimultaneously, Ben Stiller and Dan Erickson's Severance subverts corporate modernism into psychological mystery, proving that original speculative fiction continues to flourish when granted architectural freedom.`,
     category: 'Industry',
-    image: '/src/assets/images/hero_shogun_feudal_1793737313036.jpg',
+    image: '/assets/images/hero_shogun_feudal_1793737313036.jpg',
     imageAlt: 'Feudal Japanese setting in Shōgun',
     author: 'Marcus Vance',
     authorRole: 'Cultural Critic',
@@ -427,7 +493,7 @@ export const SEED_NEWS: NewsArticle[] = [
     excerpt: 'Beyond the mainstream blockbusters lie contemplative visions of artificial consciousness, temporal paradoxes, and quiet orbital solitude.',
     body: `True discovery happens at the periphery of algorithm recommendations. In this edition of Curator's Dispatch, we spotlight ten masterworks from independent filmmakers and international retrospectives.\n\nFeatured selections include Shane Carruth's Primer, Jonathan Glazer's Under the Skin, and Mamoru Oshii's 1995 Ghost in the Shell—films that privilege mood, philosophical inquiry, and sonic experimentation over conventional formula.`,
     category: 'Curation',
-    image: '/src/assets/images/hero_scifi_cyberpunk_1793737313682.jpg',
+    image: '/assets/images/hero_scifi_cyberpunk_1793737313682.jpg',
     imageAlt: 'Futuristic atmospheric skyline from Blade Runner',
     author: 'Kaelen Thorne',
     authorRole: 'Lead Curator',
