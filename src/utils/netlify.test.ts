@@ -229,5 +229,137 @@ test('TMDB 404 handling skips synthetic local IDs and caches negative lookups wi
   }
 });
 
+test('/api/reviews supports 1-5 star ratings with optional text, validation bounds, and updates', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url.includes('identitytoolkit.googleapis.com/v1/accounts:lookup')) {
+      return new Response(
+        JSON.stringify({
+          users: [
+            {
+              localId: 'test-uid-star-1',
+              email: 'critic@astreon.example',
+              emailVerified: true,
+              displayName: 'Test Critic'
+            }
+          ]
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    return new Response(JSON.stringify({ error: 'unexpected fetch' }), { status: 500 });
+  }) as typeof fetch;
 
+  try {
+    // 1. Rejects unauthenticated submission
+    const unauthRes = await handler(
+      createMockEvent({
+        path: '/api/reviews',
+        httpMethod: 'POST',
+        headers: { host: 'astreon.netlify.app', 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userName: 'Test Critic',
+          mediaId: 693134,
+          mediaType: 'movie',
+          starRating: 5,
+          reviewText: ''
+        })
+      }),
+      mockContext
+    );
+    assert.equal(unauthRes?.statusCode, 401);
 
+    // 2. Rejects out-of-range starRating (e.g. 6)
+    const invalidRes = await handler(
+      createMockEvent({
+        path: '/api/reviews',
+        httpMethod: 'POST',
+        headers: {
+          host: 'astreon.netlify.app',
+          authorization: 'Bearer mock-star-token-1',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          userName: 'Test Critic',
+          mediaId: 693134,
+          mediaType: 'movie',
+          starRating: 6,
+          reviewText: ''
+        })
+      }),
+      mockContext
+    );
+    assert.equal(invalidRes?.statusCode, 400);
+
+    // 3. Accepts 1-5 star rating with empty reviewText and scales rating * 2
+    const createRes = await handler(
+      createMockEvent({
+        path: '/api/reviews',
+        httpMethod: 'POST',
+        headers: {
+          host: 'astreon.netlify.app',
+          authorization: 'Bearer mock-star-token-1',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          userName: 'Test Critic',
+          mediaId: 693134,
+          mediaType: 'movie',
+          starRating: 5,
+          reviewText: ''
+        })
+      }),
+      mockContext
+    );
+    assert.equal(createRes?.statusCode, 201);
+    const createdBody = JSON.parse(createRes?.body || '{}');
+    assert.equal(createdBody.review?.id, 'rev_movie_693134_test-uid-star-1');
+    assert.equal(createdBody.review?.starRating, 5);
+    assert.equal(createdBody.review?.rating, 10);
+    assert.equal(createdBody.review?.reviewText, '');
+
+    // 4. Updates existing star rating via PUT
+    const updateRes = await handler(
+      createMockEvent({
+        path: '/api/reviews/rev_movie_693134_test-uid-star-1',
+        httpMethod: 'PUT',
+        headers: {
+          host: 'astreon.netlify.app',
+          authorization: 'Bearer mock-star-token-1',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          starRating: 4,
+          reviewText: 'Stunning sound design.'
+        })
+      }),
+      mockContext
+    );
+    assert.equal(updateRes?.statusCode, 200);
+    const updatedBody = JSON.parse(updateRes?.body || '{}');
+    assert.equal(updatedBody.review?.starRating, 4);
+    assert.equal(updatedBody.review?.rating, 8);
+    assert.equal(updatedBody.review?.reviewText, 'Stunning sound design.');
+
+    // 5. GET /api/reviews reflects the updated review
+    const listRes = await handler(
+      createMockEvent({
+        path: '/api/reviews',
+        httpMethod: 'GET',
+        rawQuery: 'mediaId=693134',
+        queryStringParameters: { mediaId: '693134' }
+      }),
+      mockContext
+    );
+    assert.equal(listRes?.statusCode, 200);
+    const listBody = JSON.parse(listRes?.body || '{}');
+    const found = (listBody.reviews || []).find(
+      (r: any) => r.id === 'rev_movie_693134_test-uid-star-1'
+    );
+    assert.ok(found);
+    assert.equal(found.starRating, 4);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});

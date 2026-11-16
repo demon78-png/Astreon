@@ -5,6 +5,7 @@ import { filterMedia, sortMedia, extractCatalogFacets } from '../utils/entertain
 import type { CatalogFilterParams } from '../utils/routing';
 import { Filter, RotateCcw, Film, Tv, Loader2, ChevronDown } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
+import type { MediaStarStats } from '../utils/ratings';
 
 interface CatalogBrowserProps {
   mediaType: MediaType | 'all';
@@ -24,6 +25,7 @@ interface CatalogBrowserProps {
   onLoadMore?: (filters: CatalogFilterParams) => void;
   autoplayTrailers?: boolean;
   isOnline?: boolean;
+  communityRatings?: Record<string, MediaStarStats>;
 }
 
 const BASE_GENRES = [
@@ -63,7 +65,8 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
   loadingMore = false,
   onLoadMore,
   autoplayTrailers = true,
-  isOnline = true
+  isOnline = true,
+  communityRatings
 }) => {
   const { t, tGenre } = useI18n();
   const [selectedGenre, setSelectedGenre] = useState(initialFilters?.genre || 'All');
@@ -337,6 +340,7 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
                 onToggleFavorite={onToggleFavorite}
                 autoplayTrailers={autoplayTrailers}
                 isOnline={isOnline}
+                communityRating={communityRatings?.[`${item.mediaType}:${item.id}`]}
               />
             ))}
           </div>

@@ -9,6 +9,7 @@ import {
 import { Star, Bookmark, Heart, Play, Film, VolumeX, Calendar } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
 import { buildTmdbImageSrcSet } from '../utils/images';
+import type { MediaStarStats } from '../utils/ratings';
 
 interface MediaCardProps {
   item: MediaItem;
@@ -21,6 +22,7 @@ interface MediaCardProps {
   autoplayTrailers?: boolean;
   isOnline?: boolean;
   showReleaseDate?: boolean;
+  communityRating?: MediaStarStats;
   className?: string;
 }
 
@@ -35,6 +37,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   autoplayTrailers = true,
   isOnline = true,
   showReleaseDate = false,
+  communityRating,
   className = ''
 }) => {
   const { t, tGenre, formatDate } = useI18n();
@@ -263,25 +266,58 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           </div>
         </div>
 
-        {/* TMDB Source Rating or Upcoming Premiere Status */}
-        <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#272B3A]/60 text-xs">
-          {showReleaseDate && rating === 'NR' ? (
-            <div className="flex items-center gap-1.5 text-[#38BDF8]">
-              <Calendar className="w-3 h-3" />
-              <span className="font-mono text-[11px] font-medium uppercase tracking-wide">
-                {t('card.upcoming')}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 text-[#38BDF8]">
-              <Star className="w-3 h-3 fill-[#38BDF8]" />
-              <span className="font-mono font-medium tabular-nums">{rating}</span>
-              <span className="text-[10px] text-[#858B9B] ml-0.5">TMDB</span>
-            </div>
-          )}
+        {/* TMDB Source Rating, Community Average Rating & Upcoming Status */}
+        <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-[#272B3A]/60 text-xs">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {showReleaseDate && rating === 'NR' ? (
+              <div className="flex items-center gap-1.5 text-[#38BDF8] shrink-0">
+                <Calendar className="w-3 h-3" />
+                <span className="font-mono text-[11px] font-medium uppercase tracking-wide">
+                  {t('card.upcoming')}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-[#38BDF8] shrink-0">
+                <Star className="w-3 h-3 fill-[#38BDF8]" />
+                <span className="font-mono font-medium tabular-nums">{rating}</span>
+                <span
+                  className={`text-[10px] text-[#858B9B] ${
+                    communityRating && communityRating.count > 0 ? 'hidden sm:inline' : 'ml-0.5'
+                  }`}
+                >
+                  TMDB
+                </span>
+              </div>
+            )}
 
-          <span className="text-[11px] text-[#A1A1AA] hover:text-[#F8FAFC] font-medium transition-colors">
-            {t('card.details')}
+            {communityRating && communityRating.count > 0 && (
+              <>
+                <span className="text-[#272B3A]" aria-hidden="true">·</span>
+                <div
+                  data-testid={`card-community-rating-${item.id}`}
+                  title={`ASTREON Community: ${communityRating.formatted}/5 (${communityRating.count})`}
+                  aria-label={`Community average rating ${communityRating.formatted} out of 5 from ${communityRating.count} ratings`}
+                  className="flex items-center gap-1 text-amber-400 shrink-0"
+                >
+                  <Star className="w-3 h-3 fill-amber-400" />
+                  <span className="font-mono font-semibold tabular-nums">{communityRating.formatted}</span>
+                  <span className="hidden sm:inline text-[10px] text-[#858B9B] font-mono tabular-nums">
+                    ({communityRating.count})
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <span className="text-[11px] text-[#A1A1AA] hover:text-[#F8FAFC] font-medium transition-colors whitespace-nowrap shrink-0">
+            {communityRating && communityRating.count > 0 ? (
+              <>
+                <span className="hidden sm:inline">{t('card.details')}</span>
+                <span className="sm:hidden" aria-hidden="true">→</span>
+              </>
+            ) : (
+              t('card.details')
+            )}
           </span>
         </div>
       </div>

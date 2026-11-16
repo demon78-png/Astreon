@@ -59,6 +59,7 @@ import {
   MAX_CUSTOM_COLLECTIONS
 } from './utils/collections';
 import { detectDefaultRegion, normalizeProviderRegion } from './utils/providers';
+import { aggregateStarRatingsByMedia } from './utils/ratings';
 import { updateDocumentMeta } from './utils/meta';
 import { trackTitleInteraction, trackUserSession } from './utils/analytics';
 import { parseRoute, buildRouteUrl, AppView, AccountSubTab, CatalogFilterParams } from './utils/routing';
@@ -832,6 +833,12 @@ export default function App() {
     [mediaList]
   );
 
+  // Community 1-5 star average ratings keyed by "movie:id" / "tv:id"
+  const communityRatingsByMedia = useMemo(
+    () => aggregateStarRatingsByMedia(reviews),
+    [reviews]
+  );
+
   // Toggle Watchlist handler with Firestore persistence
   const handleToggleWatchlist = (item: MediaItem) => {
     if (!currentUser) {
@@ -1259,6 +1266,7 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
                     isOnline={isOnline}
+                    communityRatings={communityRatingsByMedia}
                   />
 
                   {/* Recently Viewed Rail (Shown once user has opened any title) */}
@@ -1275,6 +1283,7 @@ export default function App() {
                       onToggleFavorite={handleToggleFavorite}
                       autoplayTrailers={autoplayTrailers}
                       isOnline={isOnline}
+                      communityRatings={communityRatingsByMedia}
                       testId="recently-viewed-rail"
                     />
                   )}
@@ -1293,6 +1302,7 @@ export default function App() {
                     autoplayTrailers={autoplayTrailers}
                     isOnline={isOnline}
                     showReleaseDate
+                    communityRatings={communityRatingsByMedia}
                     testId="coming-soon-rail"
                   />
 
@@ -1309,6 +1319,7 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
                     isOnline={isOnline}
+                    communityRatings={communityRatingsByMedia}
                     viewAllLink={() => handleNavigate('movies')}
                   />
 
@@ -1325,6 +1336,7 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
                     isOnline={isOnline}
+                    communityRatings={communityRatingsByMedia}
                     viewAllLink={() => handleNavigate('tv')}
                   />
 
@@ -1341,6 +1353,7 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
                     isOnline={isOnline}
+                    communityRatings={communityRatingsByMedia}
                   />
 
                   {/* Latest Official Trailers Rail */}
@@ -1501,6 +1514,7 @@ export default function App() {
               onLoadMore={(filters) => handleLoadMoreCatalog('movie', filters)}
               autoplayTrailers={autoplayTrailers}
               isOnline={isOnline}
+              communityRatings={communityRatingsByMedia}
             />
           )}
 
@@ -1524,6 +1538,7 @@ export default function App() {
               onLoadMore={(filters) => handleLoadMoreCatalog('tv', filters)}
               autoplayTrailers={autoplayTrailers}
               isOnline={isOnline}
+              communityRatings={communityRatingsByMedia}
             />
           )}
 
@@ -1711,6 +1726,12 @@ export default function App() {
           onOpenAuth={() => setAuthOpen(true)}
           onSelectSimilar={(sim) => openMediaDetail(sim)}
           onReviewsChanged={refreshReviews}
+          onReviewUpserted={(upserted) =>
+            setReviews((prev) => [upserted, ...prev.filter((r) => r.id !== upserted.id)])
+          }
+          onReviewDeleted={(deletedId) =>
+            setReviews((prev) => prev.filter((r) => r.id !== deletedId))
+          }
           watchRegion={watchRegion}
           onRegionChange={handleWatchRegionChange}
           onSelectPerson={(person) => setSelectedPerson(person)}

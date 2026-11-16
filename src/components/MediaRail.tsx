@@ -3,6 +3,7 @@ import { MediaItem } from '../types/entertainment';
 import { MediaCard } from './MediaCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
+import type { MediaStarStats } from '../utils/ratings';
 
 interface MediaRailProps {
   title: string;
@@ -17,6 +18,7 @@ interface MediaRailProps {
   autoplayTrailers?: boolean;
   isOnline?: boolean;
   showReleaseDate?: boolean;
+  communityRatings?: Record<string, MediaStarStats>;
   testId?: string;
   viewAllLink?: () => void;
 }
@@ -34,6 +36,7 @@ export const MediaRail: React.FC<MediaRailProps> = ({
   autoplayTrailers = true,
   isOnline = true,
   showReleaseDate = false,
+  communityRatings,
   testId,
   viewAllLink
 }) => {
@@ -113,6 +116,7 @@ export const MediaRail: React.FC<MediaRailProps> = ({
               autoplayTrailers={autoplayTrailers}
               isOnline={isOnline}
               showReleaseDate={showReleaseDate}
+              communityRating={communityRatings?.[`${item.mediaType}:${item.id}`]}
             />
           </div>
         ))}

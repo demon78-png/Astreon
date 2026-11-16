@@ -39,6 +39,12 @@ import {
   groupProvidersByAvailability
 } from '../utils/providers';
 import { isItemInCollection } from '../utils/collections';
+import {
+  calculateMediaStarStats,
+  getReviewStarValue,
+  clampStarRating
+} from '../utils/ratings';
+import { StarRatingWidget } from './StarRatingWidget';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
   X,
@@ -77,6 +83,8 @@ interface TitleDetailModalProps {
   onOpenAuth: () => void;
   onSelectSimilar?: (item: MediaItem) => void;
   onReviewsChanged?: () => void;
+  onReviewUpserted?: (review: UserReview) => void;
+  onReviewDeleted?: (reviewId: string) => void;
   watchRegion?: string;
   onRegionChange?: (region: string) => void;
   onSelectPerson?: (person: { id: number; name: string; profilePath?: string }) => void;
@@ -98,6 +106,8 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
   onOpenAuth,
   onSelectSimilar,
   onReviewsChanged,
+  onReviewUpserted,
+  onReviewDeleted,
   watchRegion = 'US',
   onRegionChange,
   onSelectPerson,
@@ -113,7 +123,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
   const [reviewSort, setReviewSort] = useState<ReviewSortOption>('newest');
   const [helpfulVotedIds, setHelpfulVotedIds] = useState<string[]>([]);
 
-  const [userRating, setUserRating] = useState<number>(8);
+  const [userStars, setUserStars] = useState<number>(4);
   const [reviewText, setReviewText] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState('');
@@ -121,7 +131,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
 
   // Inline edit state for own reviews
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
-  const [editRating, setEditRating] = useState<number>(8);
+  const [editStars, setEditStars] = useState<number>(4);
   const [editText, setEditText] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -255,6 +265,23 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     return findSimilarMedia(activeItem, catalog, 4);
   }, [activeItem, catalog]);
 
+  const starStats = useMemo(() => {
+    if (!activeItem) return { average: 0, count: 0, formatted: 'NR' };
+    return calculateMediaStarStats(reviews, activeItem.id, activeItem.mediaType);
+  }, [reviews, activeItem?.id, activeItem?.mediaType]);
+
+  const existingUserReview = useMemo(() => {
+    if (!currentUser?.uid || !activeItem) return null;
+    return (
+      reviews.find(
+        (r) =>
+          r.userId === currentUser.uid &&
+          r.mediaId === activeItem.id &&
+          (!r.mediaType || r.mediaType === activeItem.mediaType)
+      ) || null
+    );
+  }, [reviews, currentUser?.uid, activeItem?.id, activeItem?.mediaType]);
+
   if (!activeItem) return null;
 
   const year = formatReleaseYear(activeItem.releaseDate || activeItem.firstAirDate);
@@ -262,6 +289,32 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
   const runtime = formatRuntime(activeItem.runtime);
   const communityStats = calculateCommunityRating(reviews);
   const hasTrailer = activeItem.videos && activeItem.videos.some((v) => v.site === 'YouTube' && v.key);
+
+  const handleStarRatingSubmit = async (stars: number, note: string): Promise<boolean> => {
+    if (!currentUser) {
+      onOpenAuth();
+      return false;
+    }
+
+    const res = await submitReview({
+      userId: currentUser.uid,
+      userName: currentUser.displayName,
+      userAvatar: currentUser.avatar,
+      mediaId: activeItem.id,
+      mediaType: activeItem.mediaType,
+      starRating: clampStarRating(stars),
+      reviewText: note,
+      existingReview: existingUserReview
+    });
+
+    if (res) {
+      setReviews((prev) => [res, ...prev.filter((r) => r.id !== res.id)]);
+      onReviewUpserted?.(res);
+      onReviewsChanged?.();
+      return true;
+    }
+    return false;
+  };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,10 +334,12 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     const res = await submitReview({
       userId: currentUser.uid,
       userName: currentUser.displayName,
+      userAvatar: currentUser.avatar,
       mediaId: activeItem.id,
       mediaType: activeItem.mediaType,
-      rating: userRating,
-      reviewText: reviewText.trim()
+      starRating: clampStarRating(userStars),
+      reviewText: reviewText.trim(),
+      existingReview: existingUserReview
     });
 
     setSubmittingReview(false);
@@ -292,6 +347,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
       setReviewSuccess('Your review has been published to the ASTREON community.');
       setReviewText('');
       setReviews((prev) => [res, ...prev.filter((r) => r.id !== res.id)]);
+      onReviewUpserted?.(res);
       onReviewsChanged?.();
     } else {
       setReviewError('Failed to submit review. Please try again.');
@@ -300,18 +356,22 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
 
   const handleStartEdit = (rev: UserReview) => {
     setEditingReviewId(rev.id);
-    setEditRating(rev.rating);
+    setEditStars(clampStarRating(getReviewStarValue(rev)));
     setEditText(rev.reviewText);
   };
 
   const handleSaveEdit = async (rev: UserReview) => {
-    if (editText.trim().length < 5) return;
+    if (editText.trim().length < 5 && !rev.starRating) return;
     setSavingEdit(true);
-    const updated = await updateReview(rev, { rating: editRating, reviewText: editText.trim() });
+    const updated = await updateReview(rev, {
+      starRating: clampStarRating(editStars),
+      reviewText: editText.trim()
+    });
     setSavingEdit(false);
     if (updated) {
       setReviews((prev) => prev.map((r) => (r.id === rev.id ? updated : r)));
       setEditingReviewId(null);
+      onReviewUpserted?.(updated);
       onReviewsChanged?.();
     }
   };
@@ -320,6 +380,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     const ok = await deleteReview(reviewId);
     if (ok) {
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      onReviewDeleted?.(reviewId);
       onReviewsChanged?.();
     }
   };
@@ -471,11 +532,18 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                 <span className="text-[10px] text-[#858B9B]">TMDB ({activeItem.voteCount.toLocaleString()} votes)</span>
               </div>
 
-              {/* ASTREON Community Rating */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#191D2B] border border-[#272B3A]">
-                <MessageSquare className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                <span className="font-mono font-semibold text-[#F8FAFC]">{communityStats.formatted}</span>
-                <span className="text-[10px] text-[#858B9B]">ASTREON Community</span>
+              {/* ASTREON Community Star Rating */}
+              <div
+                data-testid="modal-community-star-metric"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#191D2B] border border-[#272B3A]"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span className="font-mono font-semibold text-[#F8FAFC] tabular-nums">
+                  {starStats.count > 0 ? `${starStats.formatted}/5` : communityStats.formatted}
+                </span>
+                <span className="text-[10px] text-[#858B9B] tabular-nums">
+                  ASTREON Community{starStats.count > 0 ? ` (${starStats.count})` : ''}
+                </span>
               </div>
 
               {activeItem.runtime ? (
@@ -690,6 +758,17 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Interactive 1–5 Star User Rating Component */}
+          <StarRatingWidget
+            mediaId={activeItem.id}
+            mediaTitle={activeItem.title}
+            currentUser={currentUser}
+            existingReview={existingUserReview}
+            communityStats={starStats}
+            onOpenAuth={onOpenAuth}
+            onSubmitRating={handleStarRatingSubmit}
+          />
 
           {/* Navigation Sub-Tabs */}
           <div className="flex items-center gap-4 overflow-x-auto hide-scrollbar border-b border-[#272B3A] text-xs font-medium text-[#858B9B]">
@@ -1095,22 +1174,29 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
 
                 {currentUser ? (
                   <form onSubmit={handleSubmitReview} className="space-y-3">
-                    <div className="flex items-center gap-4">
-                      <label htmlFor="user-rating-select" className="text-xs text-[#A1A1AA]">
-                        Your Score (1 to 10):
-                      </label>
-                      <select
-                        id="user-rating-select"
-                        value={userRating}
-                        onChange={(e) => setUserRating(Number(e.target.value))}
-                        className="bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-[#8B5CF6]"
-                      >
-                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-                          <option key={n} value={n}>
-                            {n}/10
-                          </option>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-xs text-[#A1A1AA]">Your Star Rating:</span>
+                      <div className="flex items-center gap-1" role="group" aria-label="Select 1 to 5 stars for review">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setUserStars(n)}
+                            aria-label={`Select ${n} out of 5 stars`}
+                            aria-pressed={userStars === n}
+                            className="p-1.5 rounded-lg hover:bg-[#191D2B] transition-colors cursor-pointer"
+                          >
+                            <Star
+                              className={`w-4 h-4 ${
+                                n <= userStars ? 'text-amber-400 fill-amber-400' : 'text-[#475569]'
+                              }`}
+                            />
+                          </button>
                         ))}
-                      </select>
+                      </div>
+                      <span className="text-xs font-mono font-semibold text-amber-400 tabular-nums">
+                        {userStars}/5
+                      </span>
                     </div>
 
                     <textarea
@@ -1208,8 +1294,9 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-mono font-semibold text-[#38BDF8] px-2 py-0.5 rounded bg-[#191D2B]">
-                              {r.rating}/10
+                            <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-amber-400 tabular-nums">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              <span>{getReviewStarValue(r).toFixed(1)}/5</span>
                             </span>
 
                             {isOwn && !isEditing && (
@@ -1250,18 +1337,25 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                         {isEditing ? (
                           <div className="space-y-2.5 pt-1">
                             <div className="flex items-center gap-2 text-xs">
-                              <span className="text-[#A1A1AA]">Score:</span>
-                              <select
-                                value={editRating}
-                                onChange={(e) => setEditRating(Number(e.target.value))}
-                                className="bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-lg px-2 py-1 text-xs font-mono"
-                              >
-                                {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}/10
-                                  </option>
+                              <span className="text-[#A1A1AA]">Stars:</span>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => setEditStars(n)}
+                                    aria-label={`Set ${n} out of 5 stars`}
+                                    className="p-1 rounded hover:bg-[#191D2B] cursor-pointer"
+                                  >
+                                    <Star
+                                      className={`w-4 h-4 ${
+                                        n <= editStars ? 'text-amber-400 fill-amber-400' : 'text-[#475569]'
+                                      }`}
+                                    />
+                                  </button>
                                 ))}
-                              </select>
+                              </div>
+                              <span className="font-mono text-amber-400 tabular-nums">{editStars}/5</span>
                             </div>
                             <textarea
                               value={editText}
@@ -1289,7 +1383,11 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                           </div>
                         ) : (
                           <>
-                            <p className="text-xs text-[#A1A1AA] leading-relaxed">{r.reviewText}</p>
+                            {r.reviewText ? (
+                              <p className="text-xs text-[#A1A1AA] leading-relaxed">{r.reviewText}</p>
+                            ) : (
+                              <p className="text-xs text-[#858B9B] italic">Submitted star rating</p>
+                            )}
                             <div className="flex items-center justify-end pt-1">
                               <button
                                 onClick={() => handleToggleHelpful(r)}

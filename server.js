@@ -921,6 +921,21 @@ function extractTmdbWatchProvidersWithRegion(watchProvidersPayload, mediaType, m
   return { providers: collected, regionUsed: chosenCode };
 }
 
+// src/utils/ratings.ts
+function clampStarRating(stars) {
+  if (!Number.isFinite(stars)) return 1;
+  return Math.min(5, Math.max(1, Math.round(stars)));
+}
+function starRatingToTenScale(stars) {
+  return clampStarRating(stars) * 2;
+}
+function buildUserReviewDocId(mediaType, mediaId, userId) {
+  const safeType = mediaType === "tv" ? "tv" : "movie";
+  const safeMediaId = Math.max(1, Math.floor(Number(mediaId) || 1));
+  const safeUid = (userId || "user").replace(/[^a-zA-Z0-9_-]/g, "_");
+  return `rev_${safeType}_${safeMediaId}_${safeUid}`.slice(0, 128);
+}
+
 // src/server/apiApp.ts
 var ADMIN_EMAIL = "danny2010qwert@gmail.com";
 var CACHE_TTL = 60 * 60 * 1e3;
@@ -1026,6 +1041,9 @@ function resolveFirebaseApiKey() {
     console.warn("[ASTREON Server] Could not read firebase-applet-config.json:", err);
   }
   return "";
+}
+function isSyntheticLocalMediaId(id) {
+  return Number.isFinite(id) && id >= 99e5 && id < 991e4;
 }
 function mapTmdbSummaryToMediaItem(raw, explicitType) {
   const mType = explicitType || (raw.media_type === "tv" ? "tv" : raw.media_type === "movie" ? "movie" : raw.first_air_date ? "tv" : "movie");
@@ -1141,6 +1159,10 @@ function createApiApp() {
         signal: AbortSignal.timeout(5e3)
       });
       if (!res.ok) {
+        if (res.status === 404) {
+          tmdbCache.set(cacheKey, { data: null, timestamp: Date.now() });
+          return null;
+        }
         console.warn(`TMDB request failed: ${res.status} ${res.statusText}`);
         return null;
       }
@@ -1461,6 +1483,12 @@ function createApiApp() {
     const localMatch = mediaItems.find(
       (m) => m.id === numId && m.mediaType === type
     );
+    if (isSyntheticLocalMediaId(numId)) {
+      if (localMatch) {
+        return res.json(localMatch);
+      }
+      return res.status(404).json({ error: "Title not found" });
+    }
     if (localMatch && (localMatch._tmdbEnriched && isDefaultLang && isDefaultRegion || !getTmdbApiKey())) {
       return res.json(localMatch);
     }
@@ -1554,7 +1582,7 @@ function createApiApp() {
       return res.status(400).json({ error: "TV ID and season number out of range" });
     }
     const language = (req.query.language || "en-US").trim();
-    if (getTmdbApiKey()) {
+    if (getTmdbApiKey() && !isSyntheticLocalMediaId(tvId)) {
       const liveSeason = await fetchFromTMDB(`/tv/${tvId}/season/${seasonNum}`, { language });
       if (liveSeason && Array.isArray(liveSeason.episodes)) {
         return res.json({
@@ -1619,7 +1647,7 @@ function createApiApp() {
       return res.status(400).json({ error: "Person ID must be a positive integer" });
     }
     const language = (req.query.language || "en-US").trim();
-    if (getTmdbApiKey()) {
+    if (getTmdbApiKey() && !isSyntheticLocalMediaId(personId)) {
       const livePerson = await fetchFromTMDB(`/person/${personId}`, {
         append_to_response: "combined_credits",
         language
@@ -1803,37 +1831,72 @@ function createApiApp() {
     res.json({ reviews });
   });
   app2.post("/api/reviews", requireAuth, (req, res) => {
-    const { id: clientId, createdAt: clientCreatedAt, userId, userName, mediaId, mediaType, rating, reviewText } = req.body;
+    const {
+      id: clientId,
+      createdAt: clientCreatedAt,
+      userId,
+      userName,
+      userAvatar,
+      mediaId,
+      mediaType,
+      rating,
+      starRating,
+      reviewText
+    } = req.body;
     const verifiedUid = req.authUser?.uid;
     if (!verifiedUid || userId && userId !== verifiedUid) {
       return res.status(403).json({ error: "Authenticated identity mismatch" });
     }
-    if (!userName || !mediaId || rating === void 0 || !reviewText) {
+    if (!userName || !mediaId || rating === void 0 && starRating === void 0) {
       return res.status(400).json({ error: "Missing required review fields" });
     }
-    const numRating = Number(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 10) {
-      return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
+    const hasStarRating = starRating !== void 0 && starRating !== null;
+    let resolvedStars;
+    let numRating;
+    if (hasStarRating) {
+      const parsedStars = Number(starRating);
+      if (!Number.isFinite(parsedStars) || parsedStars < 1 || parsedStars > 5) {
+        return res.status(400).json({ error: "Star rating must be a number between 1 and 5" });
+      }
+      resolvedStars = clampStarRating(parsedStars);
+      numRating = starRatingToTenScale(resolvedStars);
+    } else {
+      numRating = Number(rating);
+      if (isNaN(numRating) || numRating < 1 || numRating > 10) {
+        return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
+      }
     }
-    if (reviewText.trim().length < 5 || reviewText.length > 2e3) {
+    const trimmedText = typeof reviewText === "string" ? reviewText.trim() : "";
+    if (!hasStarRating && trimmedText.length < 5) {
       return res.status(400).json({ error: "Review text must be between 5 and 2000 characters" });
     }
-    const existing = reviews.find((r) => r.userId === verifiedUid && r.mediaId === Number(mediaId));
+    if (trimmedText.length > 2e3) {
+      return res.status(400).json({ error: "Review text must be at most 2000 characters" });
+    }
+    const resolvedType = mediaType === "tv" ? "tv" : "movie";
+    const existing = reviews.find(
+      (r) => r.userId === verifiedUid && r.mediaId === Number(mediaId) && r.mediaType === resolvedType
+    );
     if (existing) {
       existing.rating = numRating;
-      existing.reviewText = reviewText.trim();
+      if (resolvedStars !== void 0) {
+        existing.starRating = resolvedStars;
+      }
+      existing.reviewText = trimmedText;
       existing.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
       return res.json({ message: "Review updated successfully", review: existing });
     }
-    const reviewId = typeof clientId === "string" && VALID_DOC_ID_REGEX.test(clientId) ? clientId : `rev_${Date.now()}`;
+    const reviewId = typeof clientId === "string" && VALID_DOC_ID_REGEX.test(clientId) ? clientId : buildUserReviewDocId(resolvedType, Number(mediaId), verifiedUid);
     const newReview = {
       id: reviewId,
       userId: verifiedUid,
-      userName,
+      userName: String(userName).trim().slice(0, 100) || "ASTREON Member",
+      ...typeof userAvatar === "string" && userAvatar.trim() ? { userAvatar: userAvatar.trim().slice(0, 500) } : {},
       mediaId: Number(mediaId),
-      mediaType: mediaType || "movie",
+      mediaType: resolvedType,
       rating: numRating,
-      reviewText: reviewText.trim(),
+      ...resolvedStars !== void 0 ? { starRating: resolvedStars } : {},
+      reviewText: trimmedText,
       status: "published",
       createdAt: typeof clientCreatedAt === "string" && clientCreatedAt ? clientCreatedAt : (/* @__PURE__ */ new Date()).toISOString(),
       helpfulCount: 0
@@ -1843,7 +1906,7 @@ function createApiApp() {
   });
   app2.put("/api/reviews/:id", requireAuth, (req, res) => {
     const { id } = req.params;
-    const { rating, reviewText } = req.body;
+    const { rating, starRating, reviewText } = req.body;
     const review = reviews.find((r) => r.id === id);
     if (!review) {
       return res.status(404).json({ error: "Review not found" });
@@ -1851,15 +1914,34 @@ function createApiApp() {
     if (review.userId !== req.authUser?.uid) {
       return res.status(403).json({ error: "Only the review author can edit this review" });
     }
-    const numRating = Number(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 10) {
-      return res.status(400).json({ error: "Rating must be between 1 and 10" });
+    const hasStarRating = starRating !== void 0 && starRating !== null;
+    let resolvedStars;
+    let numRating;
+    if (hasStarRating) {
+      const parsedStars = Number(starRating);
+      if (!Number.isFinite(parsedStars) || parsedStars < 1 || parsedStars > 5) {
+        return res.status(400).json({ error: "Star rating must be a number between 1 and 5" });
+      }
+      resolvedStars = clampStarRating(parsedStars);
+      numRating = starRatingToTenScale(resolvedStars);
+    } else {
+      numRating = Number(rating);
+      if (isNaN(numRating) || numRating < 1 || numRating > 10) {
+        return res.status(400).json({ error: "Rating must be a number between 1 and 10" });
+      }
     }
-    if (!reviewText || reviewText.trim().length < 5 || reviewText.length > 2e3) {
+    const trimmedText = typeof reviewText === "string" ? reviewText.trim() : "";
+    if (!hasStarRating && trimmedText.length < 5) {
       return res.status(400).json({ error: "Review text must be between 5 and 2000 characters" });
     }
+    if (trimmedText.length > 2e3) {
+      return res.status(400).json({ error: "Review text must be at most 2000 characters" });
+    }
     review.rating = numRating;
-    review.reviewText = reviewText.trim();
+    if (resolvedStars !== void 0) {
+      review.starRating = resolvedStars;
+    }
+    review.reviewText = trimmedText;
     review.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     res.json({ success: true, review });
   });

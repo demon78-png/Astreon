@@ -1096,28 +1096,62 @@ export function createApiApp() {
 
   // POST /api/reviews (authenticated user)
   app.post('/api/reviews', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-    const { id: clientId, createdAt: clientCreatedAt, userId, userName, mediaId, mediaType, rating, reviewText } = req.body;
+    const {
+      id: clientId,
+      createdAt: clientCreatedAt,
+      userId,
+      userName,
+      userAvatar,
+      mediaId,
+      mediaType,
+      rating,
+      starRating,
+      reviewText
+    } = req.body;
     const verifiedUid = req.authUser?.uid;
     if (!verifiedUid || (userId && userId !== verifiedUid)) {
       return res.status(403).json({ error: 'Authenticated identity mismatch' });
     }
-    if (!userName || !mediaId || rating === undefined || !reviewText) {
+    if (!userName || !mediaId || (rating === undefined && starRating === undefined)) {
       return res.status(400).json({ error: 'Missing required review fields' });
     }
 
-    const numRating = Number(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 10) {
-      return res.status(400).json({ error: 'Rating must be a number between 1 and 10' });
+    const hasStarRating = starRating !== undefined && starRating !== null;
+    let resolvedStars: number | undefined;
+    let numRating: number;
+
+    if (hasStarRating) {
+      const parsedStars = Number(starRating);
+      if (!Number.isFinite(parsedStars) || parsedStars < 1 || parsedStars > 5) {
+        return res.status(400).json({ error: 'Star rating must be a number between 1 and 5' });
+      }
+      resolvedStars = clampStarRating(parsedStars);
+      numRating = starRatingToTenScale(resolvedStars);
+    } else {
+      numRating = Number(rating);
+      if (isNaN(numRating) || numRating < 1 || numRating > 10) {
+        return res.status(400).json({ error: 'Rating must be a number between 1 and 10' });
+      }
     }
 
-    if (reviewText.trim().length < 5 || reviewText.length > 2000) {
+    const trimmedText = typeof reviewText === 'string' ? reviewText.trim() : '';
+    if (!hasStarRating && trimmedText.length < 5) {
       return res.status(400).json({ error: 'Review text must be between 5 and 2000 characters' });
     }
+    if (trimmedText.length > 2000) {
+      return res.status(400).json({ error: 'Review text must be at most 2000 characters' });
+    }
 
-    const existing = reviews.find((r) => r.userId === verifiedUid && r.mediaId === Number(mediaId));
+    const resolvedType: 'movie' | 'tv' = mediaType === 'tv' ? 'tv' : 'movie';
+    const existing = reviews.find(
+      (r) => r.userId === verifiedUid && r.mediaId === Number(mediaId) && r.mediaType === resolvedType
+    );
     if (existing) {
       existing.rating = numRating;
-      existing.reviewText = reviewText.trim();
+      if (resolvedStars !== undefined) {
+        existing.starRating = resolvedStars;
+      }
+      existing.reviewText = trimmedText;
       existing.updatedAt = new Date().toISOString();
       return res.json({ message: 'Review updated successfully', review: existing });
     }
@@ -1125,16 +1159,18 @@ export function createApiApp() {
     const reviewId =
       typeof clientId === 'string' && VALID_DOC_ID_REGEX.test(clientId)
         ? clientId
-        : `rev_${Date.now()}`;
+        : buildUserReviewDocId(resolvedType, Number(mediaId), verifiedUid);
 
     const newReview: UserReview = {
       id: reviewId,
       userId: verifiedUid,
-      userName,
+      userName: String(userName).trim().slice(0, 100) || 'ASTREON Member',
+      ...(typeof userAvatar === 'string' && userAvatar.trim() ? { userAvatar: userAvatar.trim().slice(0, 500) } : {}),
       mediaId: Number(mediaId),
-      mediaType: mediaType || 'movie',
+      mediaType: resolvedType,
       rating: numRating,
-      reviewText: reviewText.trim(),
+      ...(resolvedStars !== undefined ? { starRating: resolvedStars } : {}),
+      reviewText: trimmedText,
       status: 'published',
       createdAt: typeof clientCreatedAt === 'string' && clientCreatedAt ? clientCreatedAt : new Date().toISOString(),
       helpfulCount: 0
@@ -1147,7 +1183,7 @@ export function createApiApp() {
   // PUT /api/reviews/:id (edit own review)
   app.put('/api/reviews/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const { rating, reviewText } = req.body;
+    const { rating, starRating, reviewText } = req.body;
     const review = reviews.find((r) => r.id === id);
     if (!review) {
       return res.status(404).json({ error: 'Review not found' });
@@ -1155,15 +1191,38 @@ export function createApiApp() {
     if (review.userId !== req.authUser?.uid) {
       return res.status(403).json({ error: 'Only the review author can edit this review' });
     }
-    const numRating = Number(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 10) {
-      return res.status(400).json({ error: 'Rating must be between 1 and 10' });
+
+    const hasStarRating = starRating !== undefined && starRating !== null;
+    let resolvedStars: number | undefined;
+    let numRating: number;
+
+    if (hasStarRating) {
+      const parsedStars = Number(starRating);
+      if (!Number.isFinite(parsedStars) || parsedStars < 1 || parsedStars > 5) {
+        return res.status(400).json({ error: 'Star rating must be a number between 1 and 5' });
+      }
+      resolvedStars = clampStarRating(parsedStars);
+      numRating = starRatingToTenScale(resolvedStars);
+    } else {
+      numRating = Number(rating);
+      if (isNaN(numRating) || numRating < 1 || numRating > 10) {
+        return res.status(400).json({ error: 'Rating must be a number between 1 and 10' });
+      }
     }
-    if (!reviewText || reviewText.trim().length < 5 || reviewText.length > 2000) {
+
+    const trimmedText = typeof reviewText === 'string' ? reviewText.trim() : '';
+    if (!hasStarRating && trimmedText.length < 5) {
       return res.status(400).json({ error: 'Review text must be between 5 and 2000 characters' });
     }
+    if (trimmedText.length > 2000) {
+      return res.status(400).json({ error: 'Review text must be at most 2000 characters' });
+    }
+
     review.rating = numRating;
-    review.reviewText = reviewText.trim();
+    if (resolvedStars !== undefined) {
+      review.starRating = resolvedStars;
+    }
+    review.reviewText = trimmedText;
     review.updatedAt = new Date().toISOString();
     res.json({ success: true, review });
   });
