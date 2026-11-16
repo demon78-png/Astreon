@@ -359,7 +359,100 @@ test('/api/reviews supports 1-5 star ratings with optional text, validation boun
     );
     assert.ok(found);
     assert.equal(found.starRating, 4);
+
+    // 6. GET /api/reviews supports ?mediaType= filtering to isolate movie vs tv collisions
+    const tvFilterRes = await handler(
+      createMockEvent({
+        path: '/api/reviews',
+        httpMethod: 'GET',
+        rawQuery: 'mediaId=693134&mediaType=tv',
+        queryStringParameters: { mediaId: '693134', mediaType: 'tv' }
+      }),
+      mockContext
+    );
+    assert.equal(tvFilterRes?.statusCode, 200);
+    const tvFilterBody = JSON.parse(tvFilterRes?.body || '{}');
+    assert.equal(
+      (tvFilterBody.reviews || []).some((r: any) => r.id === 'rev_movie_693134_test-uid-star-1'),
+      false
+    );
   } finally {
     globalThis.fetch = origFetch;
   }
 });
+
+test('/api/reports requires authentication, validates inputs, and persists valid moderation reports', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url.includes('identitytoolkit.googleapis.com/v1/accounts:lookup')) {
+      return new Response(
+        JSON.stringify({
+          users: [
+            {
+              localId: 'reporter-uid-1',
+              email: 'reporter@astreon.example',
+              emailVerified: true,
+              displayName: 'Reporter'
+            }
+          ]
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    return new Response(JSON.stringify({ error: 'unexpected fetch' }), { status: 500 });
+  }) as typeof fetch;
+
+  try {
+    const unauth = await handler(
+      createMockEvent({
+        path: '/api/reports',
+        httpMethod: 'POST',
+        headers: { host: 'astreon.netlify.app', 'content-type': 'application/json' },
+        body: JSON.stringify({ targetType: 'review', targetId: 'rev-1', reason: 'Spam' })
+      }),
+      mockContext
+    );
+    assert.equal(unauth?.statusCode, 401);
+
+    const badPayload = await handler(
+      createMockEvent({
+        path: '/api/reports',
+        httpMethod: 'POST',
+        headers: {
+          host: 'astreon.netlify.app',
+          authorization: 'Bearer mock-reporter-token',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ targetType: 'invalid_type', targetId: 'rev-1', reason: 'Spam' })
+      }),
+      mockContext
+    );
+    assert.equal(badPayload?.statusCode, 400);
+
+    const okRes = await handler(
+      createMockEvent({
+        path: '/api/reports',
+        httpMethod: 'POST',
+        headers: {
+          host: 'astreon.netlify.app',
+          authorization: 'Bearer mock-reporter-token',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          targetType: 'review',
+          targetId: 'rev-1',
+          reason: 'Abusive language'
+        })
+      }),
+      mockContext
+    );
+    assert.equal(okRes?.statusCode, 200);
+    const body = JSON.parse(okRes?.body || '{}');
+    assert.equal(body.success, true);
+    assert.match(String(body.message || ''), /queued for review/i);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+

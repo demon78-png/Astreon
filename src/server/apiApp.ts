@@ -550,6 +550,62 @@ export function createApiApp() {
     const language = ((req.query.language as string) || 'en-US').trim();
     const isDefaultLang = language === 'en-US';
 
+    if (getTmdbApiKey() && queryText) {
+      const searchTargets: Array<'movie' | 'tv'> = type === 'all' ? ['movie', 'tv'] : [type];
+      const searchResponses = await Promise.all(
+        searchTargets.map((mType) =>
+          fetchFromTMDB(`/search/${mType}`, {
+            query: queryText,
+            page: String(page),
+            include_adult: 'false',
+            language
+          })
+        )
+      );
+
+      const searchMapped: MediaItem[] = [];
+      let maxPages = 1;
+      let totalResults = 0;
+
+      searchResponses.forEach((resp, idx) => {
+        const mType = searchTargets[idx];
+        if (resp && Array.isArray(resp.results)) {
+          maxPages = Math.max(maxPages, Math.min(resp.total_pages || 1, 50));
+          totalResults += resp.total_results || resp.results.length;
+          for (const raw of resp.results) {
+            const item = mapTmdbSummaryToMediaItem(raw, mType);
+            if (item && item.posterPath) {
+              if (isDefaultLang) upsertCatalogItem(item);
+              searchMapped.push(item);
+            }
+          }
+        }
+      });
+
+      const filteredLive = filterMedia(searchMapped, {
+        type,
+        genre,
+        year,
+        minRating
+      });
+      const localMatches =
+        page === 1
+          ? filterMedia(SEED_MEDIA, { type, genre, year, minRating, searchQuery: queryText })
+          : [];
+      const seen = new Set(filteredLive.map((m) => `${m.mediaType}:${m.id}`));
+      const combined = [...filteredLive, ...localMatches.filter((m) => !seen.has(`${m.mediaType}:${m.id}`))];
+      if (combined.length > 0 || searchMapped.length > 0) {
+        const sorted = sortMedia(combined, sortBy);
+        return res.json({
+          results: sorted,
+          total: Math.max(totalResults, sorted.length),
+          page,
+          totalPages: maxPages,
+          source: 'tmdb'
+        });
+      }
+    }
+
     if (getTmdbApiKey() && !queryText) {
       const hasGenreFilter = Boolean(genre && genre !== 'All');
       const tmdbSortMovie =
@@ -1087,8 +1143,12 @@ export function createApiApp() {
   // GET /api/reviews
   app.get('/api/reviews', (req: Request, res: Response) => {
     const mediaId = req.query.mediaId ? parseInt(req.query.mediaId as string, 10) : undefined;
+    const rawType = req.query.mediaType;
+    const mediaType = rawType === 'movie' || rawType === 'tv' ? rawType : undefined;
     if (mediaId) {
-      const matched = reviews.filter((r) => r.mediaId === mediaId);
+      const matched = reviews.filter(
+        (r) => r.mediaId === mediaId && (!mediaType || !r.mediaType || r.mediaType === mediaType)
+      );
       return res.json({ reviews: matched });
     }
     res.json({ reviews });
@@ -1281,20 +1341,20 @@ export function createApiApp() {
   });
 
   // POST /api/reports
-  app.post('/api/reports', (req: Request, res: Response) => {
-    const { targetType, targetId, reason, reporterId } = req.body;
-    if (!targetType || !targetId || !reason) {
-      return res.status(400).json({ error: 'targetType, targetId, and reason are required' });
+  app.post('/api/reports', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const { targetType, targetId, reason } = req.body;
+    if (!targetType || !['review', 'article', 'user'].includes(targetType) || !targetId || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ error: 'Valid targetType, targetId, and reason are required' });
     }
 
     auditLogs.unshift({
       id: `log-${Date.now()}`,
-      actor: reporterId || 'user',
+      actor: req.authUser?.uid || req.authUser?.email || 'user',
       action: 'REPORT_SUBMITTED',
       targetType: targetType as any,
-      targetId,
+      targetId: String(targetId).slice(0, 128),
       timestamp: new Date().toISOString(),
-      details: `Report submitted for ${targetType} #${targetId}: "${reason}"`
+      details: `Report submitted for ${targetType} #${String(targetId).slice(0, 128)}: "${reason.trim().slice(0, 500)}"`
     });
 
     res.json({ success: true, message: 'Report received and queued for review' });

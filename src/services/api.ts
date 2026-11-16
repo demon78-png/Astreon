@@ -392,14 +392,21 @@ export async function updateNewsArticle(
   return fsOk ? merged : null;
 }
 
-export async function getReviews(mediaId?: number): Promise<UserReview[]> {
+export async function getReviews(
+  mediaId?: number,
+  mediaType?: 'movie' | 'tv'
+): Promise<UserReview[]> {
   let fsReviews: UserReview[] = [];
   let apiReviews: UserReview[] = [];
 
   try {
-    const url = mediaId ? `/api/reviews?mediaId=${mediaId}` : '/api/reviews';
+    const params = new URLSearchParams();
+    if (mediaId) params.set('mediaId', String(mediaId));
+    if (mediaType) params.set('mediaType', mediaType);
+    const qs = params.toString();
+    const url = qs ? `/api/reviews?${qs}` : '/api/reviews';
     const [fsRes, apiRes] = await Promise.all([
-      fetchFirestoreReviews(mediaId).catch(() => []),
+      fetchFirestoreReviews(mediaId, mediaType).catch(() => []),
       fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null)
@@ -411,11 +418,14 @@ export async function getReviews(mediaId?: number): Promise<UserReview[]> {
   }
 
   const seedFiltered = mediaId
-    ? SEED_REVIEWS.filter((r) => r.mediaId === mediaId)
+    ? SEED_REVIEWS.filter(
+        (r) => r.mediaId === mediaId && (!mediaType || !r.mediaType || r.mediaType === mediaType)
+      )
     : SEED_REVIEWS;
 
   const byId = new Map<string, UserReview>();
   for (const r of [...seedFiltered, ...apiReviews, ...fsReviews]) {
+    if (mediaType && r.mediaType && r.mediaType !== mediaType) continue;
     byId.set(r.id, { ...r, helpfulCount: r.helpfulCount ?? 0 });
   }
   return Array.from(byId.values()).sort((a, b) =>
@@ -621,13 +631,14 @@ export async function submitContentReport(report: {
   reason: string;
   reporterId?: string;
 }): Promise<boolean> {
+  let fsOk = false;
   if (report.reporterId) {
-    await submitContentReportToFirestore(
+    fsOk = await submitContentReportToFirestore(
       report.reporterId,
       report.targetType,
       String(report.targetId),
       report.reason
-    ).catch(() => {});
+    ).catch(() => false);
   }
   try {
     const headers = await getAuthHeaders();
@@ -636,10 +647,10 @@ export async function submitContentReport(report: {
       headers,
       body: JSON.stringify(report)
     });
-    return res.ok;
+    return fsOk || res.ok;
   } catch (e) {
     console.warn('[ASTREON] API submitContentReport error:', e);
-    return false;
+    return fsOk;
   }
 }
 

@@ -209,11 +209,13 @@ export async function getAuthIdToken(): Promise<string | null> {
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   const path = `users/${profile.uid}`;
   try {
+    const { isAdmin: _ignoredAdmin, ...safeProfile } = profile;
     await setDoc(doc(db, 'users', profile.uid), {
-      ...profile,
+      ...safeProfile,
       displayName: (profile.displayName || 'Cinema Admirer').slice(0, 100),
       email: (profile.email || '').slice(0, 150),
       ...(profile.avatar ? { avatar: profile.avatar.slice(0, 500) } : {}),
+      createdAt: (profile.createdAt || new Date().toISOString()).slice(0, 64),
       updatedAt: new Date().toISOString()
     }, { merge: true });
   } catch (err) {
@@ -276,12 +278,14 @@ export async function fetchUserWatchlist(userId: string): Promise<WatchlistItem[
 }
 
 export async function addToUserWatchlist(userId: string, entry: WatchlistItem): Promise<void> {
-  const path = `users/${userId}/watchlist/${entry.mediaId}`;
+  const cleanType = entry.mediaType === 'tv' ? 'tv' : 'movie';
+  const docId = `${cleanType}_${Math.trunc(Math.abs(Number(entry.mediaId)))}`;
+  const path = `users/${userId}/watchlist/${docId}`;
   try {
     const cleanEntry: WatchlistItem = {
-      id: (entry.id || `wl_${entry.mediaId}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128),
+      id: (entry.id || `wl_${docId}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128),
       mediaId: Number(entry.mediaId),
-      mediaType: entry.mediaType === 'tv' ? 'tv' : 'movie',
+      mediaType: cleanType,
       title: (entry.title || 'Untitled').slice(0, 200),
       posterPath: (entry.posterPath || '').slice(0, 500),
       ...(entry.backdropPath ? { backdropPath: entry.backdropPath.slice(0, 500) } : {}),
@@ -290,16 +294,36 @@ export async function addToUserWatchlist(userId: string, entry: WatchlistItem): 
       genres: Array.isArray(entry.genres) ? entry.genres.slice(0, 10) : [],
       addedAt: (entry.addedAt || new Date().toISOString()).slice(0, 64)
     };
-    await setDoc(doc(db, 'users', userId, 'watchlist', String(entry.mediaId)), cleanEntry);
+    await setDoc(doc(db, 'users', userId, 'watchlist', docId), cleanEntry);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 
-export async function removeFromUserWatchlist(userId: string, mediaId: number): Promise<void> {
-  const path = `users/${userId}/watchlist/${mediaId}`;
+export async function removeFromUserWatchlist(
+  userId: string,
+  mediaId: number,
+  mediaType?: 'movie' | 'tv'
+): Promise<void> {
+  const cleanType = mediaType === 'tv' ? 'tv' : mediaType === 'movie' ? 'movie' : undefined;
+  const scopedDocId = cleanType ? `${cleanType}_${Math.trunc(Math.abs(mediaId))}` : null;
+  const legacyDocId = String(Math.trunc(Math.abs(mediaId)));
+  const path = `users/${userId}/watchlist/${scopedDocId || legacyDocId}`;
   try {
-    await deleteDoc(doc(db, 'users', userId, 'watchlist', String(mediaId)));
+    if (scopedDocId) {
+      await deleteDoc(doc(db, 'users', userId, 'watchlist', scopedDocId));
+      const legacyRef = doc(db, 'users', userId, 'watchlist', legacyDocId);
+      const legacySnap = await getDoc(legacyRef).catch(() => null);
+      if (legacySnap?.exists() && legacySnap.data()?.mediaType === cleanType) {
+        await deleteDoc(legacyRef);
+      }
+    } else {
+      await Promise.all([
+        deleteDoc(doc(db, 'users', userId, 'watchlist', legacyDocId)),
+        deleteDoc(doc(db, 'users', userId, 'watchlist', `movie_${legacyDocId}`)),
+        deleteDoc(doc(db, 'users', userId, 'watchlist', `tv_${legacyDocId}`))
+      ]);
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
@@ -320,12 +344,14 @@ export async function fetchUserFavorites(userId: string): Promise<FavoriteItem[]
 }
 
 export async function addToUserFavorites(userId: string, entry: FavoriteItem): Promise<void> {
-  const path = `users/${userId}/favorites/${entry.mediaId}`;
+  const cleanType = entry.mediaType === 'tv' ? 'tv' : 'movie';
+  const docId = `${cleanType}_${Math.trunc(Math.abs(Number(entry.mediaId)))}`;
+  const path = `users/${userId}/favorites/${docId}`;
   try {
     const cleanEntry: FavoriteItem = {
-      id: (entry.id || `fav_${entry.mediaId}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128),
+      id: (entry.id || `fav_${docId}`).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128),
       mediaId: Number(entry.mediaId),
-      mediaType: entry.mediaType === 'tv' ? 'tv' : 'movie',
+      mediaType: cleanType,
       title: (entry.title || 'Untitled').slice(0, 200),
       posterPath: (entry.posterPath || '').slice(0, 500),
       ...(entry.backdropPath ? { backdropPath: entry.backdropPath.slice(0, 500) } : {}),
@@ -334,16 +360,36 @@ export async function addToUserFavorites(userId: string, entry: FavoriteItem): P
       genres: Array.isArray(entry.genres) ? entry.genres.slice(0, 10) : [],
       addedAt: (entry.addedAt || new Date().toISOString()).slice(0, 64)
     };
-    await setDoc(doc(db, 'users', userId, 'favorites', String(entry.mediaId)), cleanEntry);
+    await setDoc(doc(db, 'users', userId, 'favorites', docId), cleanEntry);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 
-export async function removeFromUserFavorites(userId: string, mediaId: number): Promise<void> {
-  const path = `users/${userId}/favorites/${mediaId}`;
+export async function removeFromUserFavorites(
+  userId: string,
+  mediaId: number,
+  mediaType?: 'movie' | 'tv'
+): Promise<void> {
+  const cleanType = mediaType === 'tv' ? 'tv' : mediaType === 'movie' ? 'movie' : undefined;
+  const scopedDocId = cleanType ? `${cleanType}_${Math.trunc(Math.abs(mediaId))}` : null;
+  const legacyDocId = String(Math.trunc(Math.abs(mediaId)));
+  const path = `users/${userId}/favorites/${scopedDocId || legacyDocId}`;
   try {
-    await deleteDoc(doc(db, 'users', userId, 'favorites', String(mediaId)));
+    if (scopedDocId) {
+      await deleteDoc(doc(db, 'users', userId, 'favorites', scopedDocId));
+      const legacyRef = doc(db, 'users', userId, 'favorites', legacyDocId);
+      const legacySnap = await getDoc(legacyRef).catch(() => null);
+      if (legacySnap?.exists() && legacySnap.data()?.mediaType === cleanType) {
+        await deleteDoc(legacyRef);
+      }
+    } else {
+      await Promise.all([
+        deleteDoc(doc(db, 'users', userId, 'favorites', legacyDocId)),
+        deleteDoc(doc(db, 'users', userId, 'favorites', `movie_${legacyDocId}`)),
+        deleteDoc(doc(db, 'users', userId, 'favorites', `tv_${legacyDocId}`))
+      ]);
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
@@ -495,43 +541,25 @@ export async function publishFirestoreReview(review: UserReview): Promise<boolea
 
 export async function updateFirestoreReview(
   reviewId: string,
-  existingReview: UserReview,
+  _existingReview: UserReview,
   updates: { rating: number; starRating?: number; reviewText: string }
 ): Promise<boolean> {
   const path = `reviews/${reviewId}`;
   try {
     const nowIso = new Date().toISOString();
-    const payload: UserReview =
-      typeof updates.starRating === 'number' && Number.isFinite(updates.starRating)
-        ? buildStarReviewDocument({
-            id: existingReview.id,
-            userId: existingReview.userId,
-            userName: existingReview.userName,
-            userAvatar: existingReview.userAvatar,
-            mediaId: existingReview.mediaId,
-            mediaType: existingReview.mediaType,
-            starRating: clampStarRating(updates.starRating),
-            reviewText: updates.reviewText,
-            status: existingReview.status || 'published',
-            createdAt: existingReview.createdAt,
-            updatedAt: nowIso,
-            helpfulCount: existingReview.helpfulCount ?? 0
-          })
-        : {
-            id: existingReview.id,
-            userId: existingReview.userId,
-            userName: (existingReview.userName || 'ASTREON Member').trim().slice(0, 100) || 'ASTREON Member',
-            ...(existingReview.userAvatar ? { userAvatar: existingReview.userAvatar.slice(0, 500) } : {}),
-            mediaId: Number(existingReview.mediaId),
-            mediaType: existingReview.mediaType,
-            rating: Math.min(10, Math.max(1, Number(updates.rating))),
-            reviewText: updates.reviewText.trim().slice(0, 2000),
-            status: existingReview.status || 'published',
-            createdAt: existingReview.createdAt,
-            updatedAt: nowIso,
-            helpfulCount: existingReview.helpfulCount ?? 0
-          };
-    await setDoc(doc(db, 'reviews', reviewId), payload);
+    const hasStars =
+      typeof updates.starRating === 'number' && Number.isFinite(updates.starRating);
+    const updateFields: Record<string, unknown> = {
+      rating: hasStars
+        ? clampStarRating(updates.starRating!) * 2
+        : Math.min(10, Math.max(1, Number(updates.rating))),
+      reviewText: updates.reviewText.trim().slice(0, 2000),
+      updatedAt: nowIso
+    };
+    if (hasStars) {
+      updateFields.starRating = clampStarRating(updates.starRating!);
+    }
+    await updateDoc(doc(db, 'reviews', reviewId), updateFields);
     return true;
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, path);
@@ -612,7 +640,10 @@ export async function fetchUserHelpfulVoteIds(
   }
 }
 
-export async function fetchFirestoreReviews(mediaId?: number): Promise<UserReview[]> {
+export async function fetchFirestoreReviews(
+  mediaId?: number,
+  mediaType?: 'movie' | 'tv'
+): Promise<UserReview[]> {
   const path = 'reviews';
   try {
     const colRef = collection(db, 'reviews');
@@ -620,13 +651,15 @@ export async function fetchFirestoreReviews(mediaId?: number): Promise<UserRevie
       ? query(colRef, where('mediaId', '==', mediaId))
       : colRef;
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => {
-      const data = d.data() as UserReview;
-      return {
-        ...data,
-        helpfulCount: data.helpfulCount ?? 0
-      };
-    });
+    return snapshot.docs
+      .map((d) => {
+        const data = d.data() as UserReview;
+        return {
+          ...data,
+          helpfulCount: data.helpfulCount ?? 0
+        };
+      })
+      .filter((r) => !mediaType || !r.mediaType || r.mediaType === mediaType);
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, path);
     return [];
@@ -735,7 +768,7 @@ export async function submitContentReportToFirestore(
   targetType: 'review' | 'article' | 'user',
   targetId: string,
   reason: string
-): Promise<void> {
+): Promise<boolean> {
   const reportId = `rep_${Date.now()}`;
   const path = `reports/${reportId}`;
   try {
@@ -748,8 +781,10 @@ export async function submitContentReportToFirestore(
       status: 'pending',
       createdAt: new Date().toISOString()
     });
+    return true;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
+    return false;
   }
 }
 
@@ -787,6 +822,17 @@ export async function fetchAdminAuditLogsFromFirestore(): Promise<AdminAuditLog[
 export async function deleteUserAccountFromFirebase(userId: string): Promise<void> {
   const path = `users/${userId}`;
   try {
+    if (auth.currentUser && auth.currentUser.uid === userId) {
+      const lastSignInMs = auth.currentUser.metadata?.lastSignInTime
+        ? Date.parse(auth.currentUser.metadata.lastSignInTime)
+        : NaN;
+      if (Number.isFinite(lastSignInMs) && Date.now() - lastSignInMs > 4.5 * 60 * 1000) {
+        const err = new Error('Please sign out and sign back in to verify your session before deleting your account.');
+        (err as any).code = 'auth/requires-recent-login';
+        throw err;
+      }
+    }
+
     const subcollections = ['watchlist', 'favorites', 'watchHistory', 'searchHistory'] as const;
     for (const sub of subcollections) {
       const snap = await getDocs(collection(db, 'users', userId, sub));

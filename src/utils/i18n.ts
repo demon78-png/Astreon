@@ -350,6 +350,7 @@ const EN_UI = {
   'detail.featuredCast': 'Featured Cast',
   'detail.keyCrew': 'Key Crew',
   'detail.castUnavailable': 'Cast information unavailable.',
+  'detail.providersUnavailable': 'Streaming listings unavailable for this region.',
   'detail.writeReview': 'Write an ASTREON Community Review',
   'detail.submitReview': 'Submit Review',
   'detail.signInToReview': 'Join ASTREON or sign in to contribute personal ratings and reviews.',
@@ -477,7 +478,23 @@ const EN_UI = {
   'footer.terms': 'Terms of Service',
   'footer.help': 'Help & FAQ',
   'footer.tmdbNotice': 'This platform uses the TMDB API but is not endorsed or certified by TMDB.',
-  'footer.streamNotice': 'Authorized video embeds stream exclusively from verified studio distribution channels.'
+  'footer.streamNotice': 'Authorized video embeds stream exclusively from verified studio distribution channels.',
+  // Keyboard Shortcuts
+  'shortcuts.title': 'Keyboard Shortcuts',
+  'shortcuts.subtitle': 'Navigate ASTREON faster from anywhere outside text inputs',
+  'shortcuts.navigationGroup': 'Section Navigation',
+  'shortcuts.actionsGroup': 'Search & Overlays',
+  'shortcuts.toggleSearch': 'Toggle Search',
+  'shortcuts.toggleHelp': 'Keyboard Shortcuts',
+  'shortcuts.closeModal': 'Close Active Dialog',
+  'shortcuts.footerButton': 'Shortcuts (?)',
+  'shortcuts.navHome': 'Home (Discover)',
+  'shortcuts.navMovies': 'Movies Catalog',
+  'shortcuts.navTv': 'TV Shows Catalog',
+  'shortcuts.navEditorial': 'Editorial Journal',
+  'shortcuts.navWatchlist': 'Watchlist',
+  'shortcuts.navAccount': 'Account & Profile',
+  'shortcuts.pressHint': 'Press ? anytime to toggle this guide'
 } as const;
 
 export type UiTranslationKey = keyof typeof EN_UI;
@@ -596,6 +613,7 @@ const ES_UI: PartialUiDict = {
   'detail.featuredCast': 'Reparto Principal',
   'detail.keyCrew': 'Equipo Técnico',
   'detail.castUnavailable': 'Información de reparto no disponible.',
+  'detail.providersUnavailable': 'Opciones de streaming no disponibles para esta región.',
   'detail.writeReview': 'Escribe una Reseña en ASTREON',
   'detail.submitReview': 'Publicar Reseña',
   'detail.signInToReview': 'Únete o inicia sesión para compartir calificaciones y reseñas.',
@@ -717,7 +735,22 @@ const ES_UI: PartialUiDict = {
   'footer.terms': 'Términos de Servicio',
   'footer.help': 'Ayuda y Preguntas',
   'footer.tmdbNotice': 'Esta plataforma utiliza la API de TMDB, pero no está respaldada ni certificada por TMDB.',
-  'footer.streamNotice': 'Los videos autorizados se reproducen exclusivamente desde canales oficiales.'
+  'footer.streamNotice': 'Los videos autorizados se reproducen exclusivamente desde canales oficiales.',
+  'shortcuts.title': 'Atajos de Teclado',
+  'shortcuts.subtitle': 'Navega por ASTREON más rápido fuera de campos de texto',
+  'shortcuts.navigationGroup': 'Navegación de Secciones',
+  'shortcuts.actionsGroup': 'Búsqueda y Diálogos',
+  'shortcuts.toggleSearch': 'Abrir / Cerrar Búsqueda',
+  'shortcuts.toggleHelp': 'Atajos de Teclado',
+  'shortcuts.closeModal': 'Cerrar Diálogo Activo',
+  'shortcuts.footerButton': 'Atajos (?)',
+  'shortcuts.navHome': 'Inicio (Descubrir)',
+  'shortcuts.navMovies': 'Catálogo de Películas',
+  'shortcuts.navTv': 'Catálogo de Series',
+  'shortcuts.navEditorial': 'Revista Editorial',
+  'shortcuts.navWatchlist': 'Mi Lista',
+  'shortcuts.navAccount': 'Cuenta y Perfil',
+  'shortcuts.pressHint': 'Pulsa ? en cualquier momento para ver esta guía'
 };
 
 const FR_UI: PartialUiDict = {
@@ -832,6 +865,7 @@ const FR_UI: PartialUiDict = {
   'detail.featuredCast': 'Distribution Principale',
   'detail.keyCrew': 'Équipe Technique',
   'detail.castUnavailable': 'Informations de distribution indisponibles.',
+  'detail.providersUnavailable': 'Offres de streaming indisponibles pour cette région.',
   'detail.writeReview': 'Rédiger un Avis ASTREON',
   'detail.submitReview': 'Publier l’Avis',
   'detail.signInToReview': 'Connectez-vous pour publier votre note et votre critique.',
@@ -953,7 +987,22 @@ const FR_UI: PartialUiDict = {
   'footer.terms': 'Conditions d’Utilisation',
   'footer.help': 'Aide & FAQ',
   'footer.tmdbNotice': 'Cette plateforme utilise l’API TMDB mais n’est ni approuvée ni certifiée par TMDB.',
-  'footer.streamNotice': 'Les bandes-annonces proviennent exclusivement de chaînes officielles vérifiées.'
+  'footer.streamNotice': 'Les bandes-annonces proviennent exclusivement de chaînes officielles vérifiées.',
+  'shortcuts.title': 'Raccourcis Clavier',
+  'shortcuts.subtitle': 'Naviguez plus vite dans ASTREON hors des champs de saisie',
+  'shortcuts.navigationGroup': 'Navigation par Section',
+  'shortcuts.actionsGroup': 'Recherche et Fenêtres',
+  'shortcuts.toggleSearch': 'Afficher / Masquer la Recherche',
+  'shortcuts.toggleHelp': 'Raccourcis Clavier',
+  'shortcuts.closeModal': 'Fermer la Fenêtre Active',
+  'shortcuts.footerButton': 'Raccourcis (?)',
+  'shortcuts.navHome': 'Accueil (Découvrir)',
+  'shortcuts.navMovies': 'Catalogue Films',
+  'shortcuts.navTv': 'Catalogue Séries TV',
+  'shortcuts.navEditorial': 'Revue Éditoriale',
+  'shortcuts.navWatchlist': 'À Voir',
+  'shortcuts.navAccount': 'Compte et Profil',
+  'shortcuts.pressHint': 'Appuyez sur ? à tout moment pour afficher ce guide'
 };
 
 const DE_UI: PartialUiDict = {
@@ -1068,6 +1117,7 @@ const DE_UI: PartialUiDict = {
   'detail.featuredCast': 'Hauptbesetzung',
   'detail.keyCrew': 'Schlüsselcrew',
   'detail.castUnavailable': 'Keine Besetzungsdaten verfügbar.',
+  'detail.providersUnavailable': 'Keine Streaming-Angebote für diese Region verfügbar.',
   'detail.writeReview': 'Community-Kritik schreiben',
   'detail.submitReview': 'Kritik veröffentlichen',
   'detail.signInToReview': 'Melde dich an, um eigene Bewertungen und Kritiken zu verfassen.',
@@ -1189,7 +1239,22 @@ const DE_UI: PartialUiDict = {
   'footer.terms': 'Nutzungsbedingungen',
   'footer.help': 'Hilfe & FAQ',
   'footer.tmdbNotice': 'Diese Plattform nutzt die TMDB-API, wird jedoch nicht von TMDB unterstützt oder zertifiziert.',
-  'footer.streamNotice': 'Video-Einbettungen stammen ausschließlich von verifizierten Studio-Kanälen.'
+  'footer.streamNotice': 'Video-Einbettungen stammen ausschließlich von verifizierten Studio-Kanälen.',
+  'shortcuts.title': 'Tastenkürzel',
+  'shortcuts.subtitle': 'Schneller durch ASTREON navigieren außerhalb von Eingabefeldern',
+  'shortcuts.navigationGroup': 'Bereichsnavigation',
+  'shortcuts.actionsGroup': 'Suche & Dialoge',
+  'shortcuts.toggleSearch': 'Suche umschalten',
+  'shortcuts.toggleHelp': 'Tastenkürzel',
+  'shortcuts.closeModal': 'Aktiven Dialog schließen',
+  'shortcuts.footerButton': 'Tastenkürzel (?)',
+  'shortcuts.navHome': 'Startseite (Entdecken)',
+  'shortcuts.navMovies': 'Filmkatalog',
+  'shortcuts.navTv': 'Serienkatalog',
+  'shortcuts.navEditorial': 'Redaktionelles Journal',
+  'shortcuts.navWatchlist': 'Merkliste',
+  'shortcuts.navAccount': 'Konto & Profil',
+  'shortcuts.pressHint': 'Drücken Sie jederzeit ? für diese Übersicht'
 };
 
 const JA_UI: PartialUiDict = {
@@ -1304,6 +1369,7 @@ const JA_UI: PartialUiDict = {
   'detail.featuredCast': '主要キャスト',
   'detail.keyCrew': '主要スタッフ',
   'detail.castUnavailable': 'キャスト情報は利用できません。',
+  'detail.providersUnavailable': 'この地域の配信情報は利用できません。',
   'detail.writeReview': 'コミュニティレビューを書く',
   'detail.submitReview': 'レビューを投稿',
   'detail.signInToReview': '評価やレビューを投稿するにはログインしてください。',
@@ -1425,7 +1491,22 @@ const JA_UI: PartialUiDict = {
   'footer.terms': '利用規約',
   'footer.help': 'ヘルプ & FAQ',
   'footer.tmdbNotice': '本サービスはTMDB APIを使用していますが、TMDBによる承認・認定を受けたものではありません。',
-  'footer.streamNotice': '動画はすべて公式スタジオチャネルから正規配信されています。'
+  'footer.streamNotice': '動画はすべて公式スタジオチャネルから正規配信されています。',
+  'shortcuts.title': 'キーボードショートカット',
+  'shortcuts.subtitle': '入力欄の外からASTREONを素早く操作できます',
+  'shortcuts.navigationGroup': 'セクション移動',
+  'shortcuts.actionsGroup': '検索とダイアログ',
+  'shortcuts.toggleSearch': '検索を開閉',
+  'shortcuts.toggleHelp': 'ショートカット一覧',
+  'shortcuts.closeModal': '表示中のダイアログを閉じる',
+  'shortcuts.footerButton': 'ショートカット (?)',
+  'shortcuts.navHome': 'ホーム (発見)',
+  'shortcuts.navMovies': '映画カタログ',
+  'shortcuts.navTv': 'ドラマカタログ',
+  'shortcuts.navEditorial': '特集記事',
+  'shortcuts.navWatchlist': 'ウォッチリスト',
+  'shortcuts.navAccount': 'アカウント・プロフィール',
+  'shortcuts.pressHint': 'いつでも ? キーでこのガイドを開閉できます'
 };
 
 const PT_UI: PartialUiDict = {
@@ -1540,6 +1621,7 @@ const PT_UI: PartialUiDict = {
   'detail.featuredCast': 'Elenco Principal',
   'detail.keyCrew': 'Equipe Técnica',
   'detail.castUnavailable': 'Informações de elenco indisponíveis.',
+  'detail.providersUnavailable': 'Opções de streaming indisponíveis para esta região.',
   'detail.writeReview': 'Escreva uma Crítica na ASTREON',
   'detail.submitReview': 'Enviar Avaliação',
   'detail.signInToReview': 'Entre para compartilhar suas notas e críticas.',
@@ -1661,7 +1743,22 @@ const PT_UI: PartialUiDict = {
   'footer.terms': 'Termos de Serviço',
   'footer.help': 'Ajuda e Perguntas',
   'footer.tmdbNotice': 'Esta plataforma usa a API do TMDB, mas não é endossada ou certificada pelo TMDB.',
-  'footer.streamNotice': 'Os vídeos incorporados vêm exclusivamente de canais oficiais verificados.'
+  'footer.streamNotice': 'Os vídeos incorporados vêm exclusivamente de canais oficiais verificados.',
+  'shortcuts.title': 'Atalhos de Teclado',
+  'shortcuts.subtitle': 'Navegue mais rápido pela ASTREON fora dos campos de texto',
+  'shortcuts.navigationGroup': 'Navegação de Seções',
+  'shortcuts.actionsGroup': 'Busca e Diálogos',
+  'shortcuts.toggleSearch': 'Alternar Busca',
+  'shortcuts.toggleHelp': 'Atalhos de Teclado',
+  'shortcuts.closeModal': 'Fechar Diálogo Ativo',
+  'shortcuts.footerButton': 'Atalhos (?)',
+  'shortcuts.navHome': 'Início (Descobrir)',
+  'shortcuts.navMovies': 'Catálogo de Filmes',
+  'shortcuts.navTv': 'Catálogo de Séries',
+  'shortcuts.navEditorial': 'Jornal Editorial',
+  'shortcuts.navWatchlist': 'Minha Lista',
+  'shortcuts.navAccount': 'Conta e Perfil',
+  'shortcuts.pressHint': 'Pressione ? a qualquer momento para abrir este guia'
 };
 
 export const I18N_DICTIONARY: Record<SupportedLocale, PartialUiDict> = {

@@ -45,7 +45,9 @@ import {
   getScopedStorageKey,
   resolveAutoplayTrailersPreference,
   getUpcomingMediaItems,
-  watchHistoryToMediaItems
+  watchHistoryToMediaItems,
+  getMediaKey,
+  hasMediaEntry
 } from './utils/entertainment';
 import {
   createWatchHistoryEntry,
@@ -77,8 +79,14 @@ import { MediaRail } from './components/MediaRail';
 import { SearchModal } from './components/SearchModal';
 import { AuthModal } from './components/AuthModal';
 import { OfflineBanner } from './components/OfflineBanner';
-import { HeroSkeleton, MediaRailSkeleton } from './components/Skeletons';
+import {
+  DiscoverSkeleton,
+  CatalogGridSkeleton,
+  EditorialSkeleton,
+  AccountSkeleton
+} from './components/Skeletons';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { LegalTab } from './components/LegalModal';
 import type { PersonSelection } from './components/PersonProfileModal';
 import { Play, Check, Film, Newspaper } from 'lucide-react';
@@ -113,6 +121,9 @@ const LegalModal = lazy(() =>
 );
 const ShareMobileModal = lazy(() =>
   import('./components/ShareMobileModal').then((m) => ({ default: m.ShareMobileModal }))
+);
+const KeyboardShortcutsModal = lazy(() =>
+  import('./components/KeyboardShortcutsModal').then((m) => ({ default: m.KeyboardShortcutsModal }))
 );
 
 function loadScopedJson<T>(baseKey: string, uid: string | undefined, fallback: T): T {
@@ -170,6 +181,8 @@ export default function App() {
 
   // Media & Editorial Data state
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(true);
+  const [isFilteringCatalog, setIsFilteringCatalog] = useState<boolean>(false);
+  const [isLoadingNews, setIsLoadingNews] = useState<boolean>(true);
   const [mediaList, setMediaList] = useState<MediaItem[]>(() =>
     SEED_MEDIA.map((m) => getSeedLocalizedMediaSync(m, locale))
   );
@@ -196,6 +209,7 @@ export default function App() {
   const [selectedPerson, setSelectedPerson] = useState<PersonSelection | null>(null);
   const [trailerMedia, setTrailerMedia] = useState<MediaItem | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -204,6 +218,8 @@ export default function App() {
   // Toast feedback message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catalogSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterRequestIdRef = useRef<number>(0);
   const [failedHomeImages, setFailedHomeImages] = useState<Record<string, boolean>>({});
 
   const showToast = useCallback((msg: string) => {
@@ -221,6 +237,9 @@ export default function App() {
     return () => {
       if (toastTimerRef.current) {
         clearTimeout(toastTimerRef.current);
+      }
+      if (catalogSearchTimerRef.current) {
+        clearTimeout(catalogSearchTimerRef.current);
       }
     };
   }, []);
@@ -403,31 +422,17 @@ export default function App() {
     }
   }, [currentUser?.uid]);
 
-  // Global keyboard '/' search shortcut (strictly guarded against inputs/modals)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (target) {
-        const tag = target.tagName;
-        if (
-          tag === 'INPUT' ||
-          tag === 'TEXTAREA' ||
-          tag === 'SELECT' ||
-          target.isContentEditable
-        ) {
-          return;
-        }
-      }
-      if (searchOpen || authOpen || legalOpen || shareOpen || selectedMedia || selectedPerson || trailerMedia) {
-        return;
-      }
-      e.preventDefault();
-      setSearchOpen(true);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [searchOpen, authOpen, legalOpen, shareOpen, selectedMedia, selectedPerson, trailerMedia]);
+  // Centralized global keyboard shortcut manager ('/' search toggle, '1-6' section nav, '?' help)
+  useKeyboardShortcuts({
+    searchOpen,
+    shortcutsOpen,
+    hasBlockingModalOpen: Boolean(
+      authOpen || legalOpen || shareOpen || selectedMedia || selectedPerson || trailerMedia
+    ),
+    onToggleSearch: () => setSearchOpen((prev) => !prev),
+    onToggleHelp: () => setShortcutsOpen((prev) => !prev),
+    onNavigate: (view) => handleNavigate(view)
+  });
 
   // Browser Back / Forward history listener
   useEffect(() => {
@@ -496,6 +501,10 @@ export default function App() {
 
       if (reviewsRes && reviewsRes.length > 0) {
         setReviews(reviewsRes);
+      }
+    }).finally(() => {
+      if (active) {
+        setIsLoadingNews(false);
       }
     });
 
@@ -633,11 +642,15 @@ export default function App() {
       }
       setSelectedMedia((prev) => {
         if (!prev) return null;
-        return cachedCatalog.find((m) => m.id === prev.id) || getSeedLocalizedMediaSync(prev, locale);
+        return (
+          cachedCatalog.find((m) => m.id === prev.id && m.mediaType === prev.mediaType) ||
+          getSeedLocalizedMediaSync(prev, locale)
+        );
       });
       setIsLoadingCatalog(false);
     } else {
-      // Instant synchronous seed localization while live localized TMDB data loads
+      // Display main skeletal loading state while live localized catalog items are fetched
+      setIsLoadingCatalog(true);
       const syncSeed = SEED_MEDIA.map((m) => getSeedLocalizedMediaSync(m, locale));
       const syncSeedFeat = syncSeed.find((m) => m.id === featuredIdRef.current) || syncSeed[0];
       if (syncSeedFeat) {
@@ -789,9 +802,17 @@ export default function App() {
     } catch {}
   }, [currentUser]);
 
-  // Derived Watchlist and Favorites ID arrays for fast checks
+  // Derived Watchlist and Favorites ID & composite key arrays for fast collision-safe checks
   const watchlistIds = useMemo(() => watchlist.map((w) => w.mediaId), [watchlist]);
   const favoriteIds = useMemo(() => favorites.map((f) => f.mediaId), [favorites]);
+  const watchlistKeys = useMemo(
+    () => watchlist.map((w) => getMediaKey(w.mediaId, w.mediaType)),
+    [watchlist]
+  );
+  const favoriteKeys = useMemo(
+    () => favorites.map((f) => getMediaKey(f.mediaId, f.mediaType)),
+    [favorites]
+  );
 
   const autoplayTrailers = useMemo(() => {
     let localPref: string | null = null;
@@ -845,15 +866,17 @@ export default function App() {
       setAuthOpen(true);
       return;
     }
-    if (watchlistIds.includes(item.id)) {
-      setWatchlist((prev) => prev.filter((w) => w.mediaId !== item.id));
+    if (hasMediaEntry(watchlist, item.id, item.mediaType)) {
+      setWatchlist((prev) =>
+        prev.filter((w) => !(w.mediaId === item.id && w.mediaType === item.mediaType))
+      );
       if (currentUser.uid) {
-        removeFromUserWatchlist(currentUser.uid, item.id);
+        removeFromUserWatchlist(currentUser.uid, item.id, item.mediaType);
       }
       showToast(`Removed "${item.title}" from your Watchlist`);
     } else {
       const newEntry: WatchlistItem = {
-        id: `wl-${Date.now()}`,
+        id: `wl-${item.mediaType}-${item.id}-${Date.now()}`,
         mediaId: item.id,
         mediaType: item.mediaType,
         title: item.title,
@@ -878,15 +901,17 @@ export default function App() {
       setAuthOpen(true);
       return;
     }
-    if (favoriteIds.includes(item.id)) {
-      setFavorites((prev) => prev.filter((f) => f.mediaId !== item.id));
+    if (hasMediaEntry(favorites, item.id, item.mediaType)) {
+      setFavorites((prev) =>
+        prev.filter((f) => !(f.mediaId === item.id && f.mediaType === item.mediaType))
+      );
       if (currentUser.uid) {
-        removeFromUserFavorites(currentUser.uid, item.id);
+        removeFromUserFavorites(currentUser.uid, item.id, item.mediaType);
       }
       showToast(`Removed "${item.title}" from Favourites`);
     } else {
       const newEntry: FavoriteItem = {
-        id: `fav-${Date.now()}`,
+        id: `fav-${item.mediaType}-${item.id}-${Date.now()}`,
         mediaId: item.id,
         mediaType: item.mediaType,
         title: item.title,
@@ -1046,6 +1071,10 @@ export default function App() {
       targetView = 'account';
       targetAccountTab = 'collections';
       setAccountSubTab('collections');
+    } else if (view === 'profile') {
+      targetView = 'account';
+      targetAccountTab = 'profile';
+      setAccountSubTab('profile');
     } else if (
       view === 'discover' ||
       view === 'movies' ||
@@ -1075,15 +1104,18 @@ export default function App() {
     (type: 'movie' | 'tv', next: CatalogFilterParams) => {
       setCatalogFilters(next);
       pushUrl({ view: type === 'movie' ? 'movies' : 'tv', ...next }, true);
-      if (next.genre || next.year || next.minRating || next.sort) {
+
+      const fetchAndMergeCatalog = (filtersToFetch: CatalogFilterParams) => {
+        const requestId = ++filterRequestIdRef.current;
+        setIsFilteringCatalog(true);
         getDiscoverMedia(
           {
             type,
-            genre: next.genre,
-            year: next.year,
-            minRating: next.minRating,
-            sortBy: next.sort,
-            searchQuery: next.q
+            genre: filtersToFetch.genre,
+            year: filtersToFetch.year,
+            minRating: filtersToFetch.minRating,
+            sortBy: filtersToFetch.sort,
+            searchQuery: filtersToFetch.q
           },
           1,
           tmdbLanguage
@@ -1105,7 +1137,27 @@ export default function App() {
               });
             }
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            if (filterRequestIdRef.current === requestId) {
+              setIsFilteringCatalog(false);
+            }
+          });
+      };
+
+      if (catalogSearchTimerRef.current) {
+        clearTimeout(catalogSearchTimerRef.current);
+        catalogSearchTimerRef.current = null;
+      }
+
+      if (next.genre || next.year || next.minRating || next.sort) {
+        fetchAndMergeCatalog(next);
+      } else if (next.q && next.q.trim().length >= 2) {
+        const snapshot = { ...next, q: next.q.trim() };
+        catalogSearchTimerRef.current = setTimeout(() => {
+          catalogSearchTimerRef.current = null;
+          fetchAndMergeCatalog(snapshot);
+        }, 350);
       }
     },
     [pushUrl, locale, tmdbLanguage]
@@ -1206,6 +1258,7 @@ export default function App() {
         onNavigate={handleNavigate}
         onOpenSearch={() => setSearchOpen(true)}
         onOpenShare={() => setShareOpen(true)}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
         currentUser={currentUser}
         onOpenAuth={() => setAuthOpen(true)}
         onSignOut={() => {
@@ -1227,21 +1280,16 @@ export default function App() {
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {/* VIEW 1: DISCOVER / HOMEPAGE */}
         {currentView === 'discover' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            {isLoadingCatalog ? (
-              <div className="space-y-8">
-                <HeroSkeleton />
-                <MediaRailSkeleton />
-                <MediaRailSkeleton />
-              </div>
-            ) : (
-              <>
+          isLoadingCatalog ? (
+            <DiscoverSkeleton />
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 {/* Hero Banner */}
                 <HeroBanner
                   item={featuredMedia}
                   onSelect={openMediaDetail}
                   onWatchTrailer={openTrailerModal}
-                  isWatchlisted={watchlistIds.includes(featuredMedia.id)}
+                  isWatchlisted={hasMediaEntry(watchlist, featuredMedia.id, featuredMedia.mediaType)}
                   onToggleWatchlist={handleToggleWatchlist}
                 />
 
@@ -1262,6 +1310,8 @@ export default function App() {
                     onWatchTrailer={openTrailerModal}
                     watchlistIds={watchlistIds}
                     favoriteIds={favoriteIds}
+                    watchlistKeys={watchlistKeys}
+                    favoriteKeys={favoriteKeys}
                     onToggleWatchlist={handleToggleWatchlist}
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
@@ -1279,6 +1329,8 @@ export default function App() {
                       onWatchTrailer={openTrailerModal}
                       watchlistIds={watchlistIds}
                       favoriteIds={favoriteIds}
+                      watchlistKeys={watchlistKeys}
+                      favoriteKeys={favoriteKeys}
                       onToggleWatchlist={handleToggleWatchlist}
                       onToggleFavorite={handleToggleFavorite}
                       autoplayTrailers={autoplayTrailers}
@@ -1297,6 +1349,8 @@ export default function App() {
                     onWatchTrailer={openTrailerModal}
                     watchlistIds={watchlistIds}
                     favoriteIds={favoriteIds}
+                    watchlistKeys={watchlistKeys}
+                    favoriteKeys={favoriteKeys}
                     onToggleWatchlist={handleToggleWatchlist}
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
@@ -1315,6 +1369,8 @@ export default function App() {
                     onWatchTrailer={openTrailerModal}
                     watchlistIds={watchlistIds}
                     favoriteIds={favoriteIds}
+                    watchlistKeys={watchlistKeys}
+                    favoriteKeys={favoriteKeys}
                     onToggleWatchlist={handleToggleWatchlist}
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
@@ -1332,6 +1388,8 @@ export default function App() {
                     onWatchTrailer={openTrailerModal}
                     watchlistIds={watchlistIds}
                     favoriteIds={favoriteIds}
+                    watchlistKeys={watchlistKeys}
+                    favoriteKeys={favoriteKeys}
                     onToggleWatchlist={handleToggleWatchlist}
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
@@ -1349,6 +1407,8 @@ export default function App() {
                     onWatchTrailer={openTrailerModal}
                     watchlistIds={watchlistIds}
                     favoriteIds={favoriteIds}
+                    watchlistKeys={watchlistKeys}
+                    favoriteKeys={favoriteKeys}
                     onToggleWatchlist={handleToggleWatchlist}
                     onToggleFavorite={handleToggleFavorite}
                     autoplayTrailers={autoplayTrailers}
@@ -1370,16 +1430,18 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-                      {titlesWithTrailers.slice(0, 4).map((item) => (
+                      {titlesWithTrailers.slice(0, 4).map((item) => {
+                        const trailerKey = `trailer-${item.mediaType}-${item.id}`;
+                        return (
                         <button
                           type="button"
-                          key={item.id}
+                          key={`${item.mediaType}-${item.id}`}
                           onClick={() => openTrailerModal(item)}
                           className="text-left group relative rounded-xl bg-[#111421] border border-[#272B3A] overflow-hidden hover:border-[#8B5CF6]/50 cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
                         >
                           <div className="aspect-video relative overflow-hidden bg-[#191D2B]">
                             {(item.backdropPath || item.posterPath) &&
-                            !failedHomeImages[`trailer-${item.id}`] ? (
+                            !failedHomeImages[trailerKey] ? (
                               <img
                                 src={item.backdropPath || item.posterPath}
                                 alt={item.title}
@@ -1387,7 +1449,7 @@ export default function App() {
                                 onError={() =>
                                   setFailedHomeImages((prev) => ({
                                     ...prev,
-                                    [`trailer-${item.id}`]: true
+                                    [trailerKey]: true
                                   }))
                                 }
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -1412,7 +1474,8 @@ export default function App() {
                             </p>
                           </div>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </section>
 
@@ -1481,21 +1544,32 @@ export default function App() {
                     </div>
                   </section>
                 </div>
-              </>
-            )}
-          </div>
+            </div>
+          )
+        )}
+
+        {/* Data-Loading Skeletons for Secondary Routes (kept outside Suspense to avoid double-mounting) */}
+        {(currentView === 'movies' || currentView === 'tv') && isLoadingCatalog && (
+          <CatalogGridSkeleton />
+        )}
+        {currentView === 'news' && isLoadingNews && (
+          <EditorialSkeleton />
         )}
 
         {/* Lazy-Loaded Secondary Routes */}
         <Suspense
           fallback={
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-              <MediaRailSkeleton />
-            </div>
+            currentView === 'movies' || currentView === 'tv' ? (
+              <CatalogGridSkeleton />
+            ) : currentView === 'news' ? (
+              <EditorialSkeleton />
+            ) : (
+              <AccountSkeleton />
+            )
           }
         >
           {/* VIEW 2: MOVIES DISCOVERY */}
-          {currentView === 'movies' && (
+          {currentView === 'movies' && !isLoadingCatalog && (
             <CatalogBrowser
               mediaType="movie"
               items={trendingMovies}
@@ -1503,6 +1577,8 @@ export default function App() {
               onWatchTrailer={openTrailerModal}
               watchlistIds={watchlistIds}
               favoriteIds={favoriteIds}
+              watchlistKeys={watchlistKeys}
+              favoriteKeys={favoriteKeys}
               onToggleWatchlist={handleToggleWatchlist}
               onToggleFavorite={handleToggleFavorite}
               title={t('catalog.moviesTitle')}
@@ -1511,6 +1587,7 @@ export default function App() {
               onFiltersChange={(next) => handleCatalogFiltersChange('movie', next)}
               hasMore={catalogPagination.moviePage < catalogPagination.movieTotalPages}
               loadingMore={catalogPagination.loadingMore}
+              isLoading={isFilteringCatalog}
               onLoadMore={(filters) => handleLoadMoreCatalog('movie', filters)}
               autoplayTrailers={autoplayTrailers}
               isOnline={isOnline}
@@ -1519,7 +1596,7 @@ export default function App() {
           )}
 
           {/* VIEW 3: TV SHOWS DISCOVERY */}
-          {currentView === 'tv' && (
+          {currentView === 'tv' && !isLoadingCatalog && (
             <CatalogBrowser
               mediaType="tv"
               items={tvSeries}
@@ -1527,6 +1604,8 @@ export default function App() {
               onWatchTrailer={openTrailerModal}
               watchlistIds={watchlistIds}
               favoriteIds={favoriteIds}
+              watchlistKeys={watchlistKeys}
+              favoriteKeys={favoriteKeys}
               onToggleWatchlist={handleToggleWatchlist}
               onToggleFavorite={handleToggleFavorite}
               title={t('catalog.tvTitle')}
@@ -1535,6 +1614,7 @@ export default function App() {
               onFiltersChange={(next) => handleCatalogFiltersChange('tv', next)}
               hasMore={catalogPagination.tvPage < catalogPagination.tvTotalPages}
               loadingMore={catalogPagination.loadingMore}
+              isLoading={isFilteringCatalog}
               onLoadMore={(filters) => handleLoadMoreCatalog('tv', filters)}
               autoplayTrailers={autoplayTrailers}
               isOnline={isOnline}
@@ -1543,7 +1623,7 @@ export default function App() {
           )}
 
           {/* VIEW 4: EDITORIAL NEWS */}
-          {currentView === 'news' && (
+          {currentView === 'news' && !isLoadingNews && (
             <EditorialNewsView
               articles={publishedArticles}
               selectedArticle={selectedArticle}
@@ -1571,14 +1651,18 @@ export default function App() {
                 onToggleCollectionPublic={handleToggleCollectionPublic}
                 onRemoveFromCollection={handleRemoveFromCollection}
                 onDeleteCollection={handleDeleteCollection}
-                onRemoveWatchlist={(id) => {
-                  setWatchlist((prev) => prev.filter((w) => w.mediaId !== id));
-                  if (currentUser.uid) removeFromUserWatchlist(currentUser.uid, id);
+                onRemoveWatchlist={(id, mediaType) => {
+                  setWatchlist((prev) =>
+                    prev.filter((w) => !(w.mediaId === id && w.mediaType === mediaType))
+                  );
+                  if (currentUser.uid) removeFromUserWatchlist(currentUser.uid, id, mediaType);
                   showToast('Removed title from Watchlist');
                 }}
-                onRemoveFavorite={(id) => {
-                  setFavorites((prev) => prev.filter((f) => f.mediaId !== id));
-                  if (currentUser.uid) removeFromUserFavorites(currentUser.uid, id);
+                onRemoveFavorite={(id, mediaType) => {
+                  setFavorites((prev) =>
+                    prev.filter((f) => !(f.mediaId === id && f.mediaType === mediaType))
+                  );
+                  if (currentUser.uid) removeFromUserFavorites(currentUser.uid, id, mediaType);
                   showToast('Removed title from Favourites');
                 }}
                 onRemoveWatchHistory={(entryId) => {
@@ -1709,6 +1793,7 @@ export default function App() {
         onOpenLegal={handleOpenLegal}
         onNavigate={handleNavigate}
         onOpenShare={() => setShareOpen(true)}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
       />
 
       {/* Global Interactive Modals */}
@@ -1718,8 +1803,16 @@ export default function App() {
           catalog={mediaList}
           onClose={closeMediaDetail}
           onWatchTrailer={openTrailerModal}
-          isWatchlisted={selectedMedia ? watchlistIds.includes(selectedMedia.id) : false}
-          isFavorite={selectedMedia ? favoriteIds.includes(selectedMedia.id) : false}
+          isWatchlisted={
+            selectedMedia
+              ? hasMediaEntry(watchlist, selectedMedia.id, selectedMedia.mediaType)
+              : false
+          }
+          isFavorite={
+            selectedMedia
+              ? hasMediaEntry(favorites, selectedMedia.id, selectedMedia.mediaType)
+              : false
+          }
           onToggleWatchlist={handleToggleWatchlist}
           onToggleFavorite={handleToggleFavorite}
           currentUser={currentUser}
@@ -1764,6 +1857,13 @@ export default function App() {
         <ShareMobileModal
           isOpen={shareOpen}
           onClose={() => setShareOpen(false)}
+        />
+
+        <KeyboardShortcutsModal
+          isOpen={shortcutsOpen}
+          onClose={() => setShortcutsOpen(false)}
+          onNavigate={handleNavigate}
+          onOpenSearch={() => setSearchOpen(true)}
         />
       </Suspense>
 

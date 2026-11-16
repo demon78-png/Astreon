@@ -48,8 +48,8 @@ interface AccountViewProps {
   onToggleCollectionPublic: (collectionId: string) => void;
   onRemoveFromCollection: (collectionId: string, mediaId: number, mediaType: 'movie' | 'tv') => void;
   onDeleteCollection: (collectionId: string) => void;
-  onRemoveWatchlist: (mediaId: number) => void;
-  onRemoveFavorite: (mediaId: number) => void;
+  onRemoveWatchlist: (mediaId: number, mediaType: 'movie' | 'tv') => void;
+  onRemoveFavorite: (mediaId: number, mediaType: 'movie' | 'tv') => void;
   onRemoveWatchHistory: (entryId: string) => void;
   onClearWatchHistory: () => void;
   onSelectMediaById: (mediaId: number, type: 'movie' | 'tv') => void;
@@ -139,6 +139,8 @@ export const AccountView: React.FC<AccountViewProps> = ({
   const [copiedCollectionId, setCopiedCollectionId] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -312,7 +314,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {watchlist.map((item) => (
                 <div
-                  key={item.id}
+                  key={`${item.mediaType}-${item.id}`}
                   className="group relative flex flex-col bg-[#111421] border border-[#272B3A] rounded-xl overflow-hidden hover:border-[#8B5CF6]/50 transition-all"
                 >
                   <button
@@ -336,7 +338,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onRemoveWatchlist(item.mediaId)}
+                    onClick={() => onRemoveWatchlist(item.mediaId, item.mediaType)}
                     className="absolute top-2 right-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-[#080A12]/85 hover:bg-rose-600 text-[#A1A1AA] hover:text-white border border-[#272B3A] transition-colors cursor-pointer"
                     aria-label={`Remove ${item.title} from Watchlist`}
                     title="Remove from Watchlist"
@@ -376,7 +378,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {favorites.map((item) => (
                 <div
-                  key={item.id}
+                  key={`${item.mediaType}-${item.id}`}
                   className="group relative flex flex-col bg-[#111421] border border-[#272B3A] rounded-xl overflow-hidden hover:border-rose-500/50 transition-all"
                 >
                   <button
@@ -400,7 +402,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onRemoveFavorite(item.mediaId)}
+                    onClick={() => onRemoveFavorite(item.mediaId, item.mediaType)}
                     className="absolute top-2 right-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-[#080A12]/85 hover:bg-rose-600 text-[#A1A1AA] hover:text-white border border-[#272B3A] transition-colors cursor-pointer"
                     aria-label={`Remove ${item.title} from Favourites`}
                     title="Remove from Favourites"
@@ -873,7 +875,10 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
             <button
               type="button"
-              onClick={() => setShowDeleteConfirm(true)}
+              onClick={() => {
+                setDeleteError('');
+                setShowDeleteConfirm(true);
+              }}
               className="text-xs text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
             >
               Delete Account
@@ -889,14 +894,29 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <p className="text-[11px] text-[#A1A1AA]">
                 This will permanently remove your profile, personal watchlist, and saved favourites in accordance with our Privacy Policy.
               </p>
+              {deleteError && (
+                <p className="text-xs text-rose-300 bg-rose-950/50 border border-rose-500/40 rounded-lg px-3 py-2">
+                  {deleteError}
+                </p>
+              )}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  disabled={deletingAccount}
                   onClick={async () => {
+                    setDeletingAccount(true);
+                    setDeleteError('');
                     try {
                       await deleteUserAccountFromFirebase(currentUser.uid);
-                    } catch (err) {
-                      console.warn('Firebase user deletion note:', err);
+                    } catch (err: any) {
+                      const code = err?.code || '';
+                      setDeleteError(
+                        code === 'auth/requires-recent-login'
+                          ? 'For your security, please sign out and sign back in before deleting your account.'
+                          : err?.message || 'Unable to delete account right now. Please try again.'
+                      );
+                      setDeletingAccount(false);
+                      return;
                     }
                     localStorage.removeItem(getScopedStorageKey('astreon_watchlist', currentUser.uid));
                     localStorage.removeItem(getScopedStorageKey('astreon_favorites', currentUser.uid));
@@ -907,16 +927,21 @@ export const AccountView: React.FC<AccountViewProps> = ({
                     localStorage.removeItem('astreon_favorites');
                     localStorage.removeItem('astreon_collections');
                     localStorage.removeItem('astreon_user');
+                    setDeletingAccount(false);
                     onSignOut();
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-semibold cursor-pointer"
                 >
-                  Confirm Account Deletion
+                  {deletingAccount ? 'Deleting...' : 'Confirm Account Deletion'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-3 py-1.5 rounded-lg bg-[#191D2B] text-xs text-[#A1A1AA] hover:text-[#F8FAFC] cursor-pointer"
+                  disabled={deletingAccount}
+                  onClick={() => {
+                    setDeleteError('');
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-[#191D2B] text-xs text-[#A1A1AA] hover:text-[#F8FAFC] cursor-pointer disabled:opacity-60"
                 >
                   Cancel
                 </button>

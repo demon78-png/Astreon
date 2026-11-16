@@ -3,6 +3,7 @@ import { MediaItem } from '../types/entertainment';
 import { MediaCard } from './MediaCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
+import { getMediaKey } from '../utils/entertainment';
 import type { MediaStarStats } from '../utils/ratings';
 
 interface MediaRailProps {
@@ -13,6 +14,8 @@ interface MediaRailProps {
   onWatchTrailer?: (item: MediaItem) => void;
   watchlistIds?: number[];
   favoriteIds?: number[];
+  watchlistKeys?: string[];
+  favoriteKeys?: string[];
   onToggleWatchlist?: (item: MediaItem) => void;
   onToggleFavorite?: (item: MediaItem) => void;
   autoplayTrailers?: boolean;
@@ -31,6 +34,8 @@ export const MediaRail: React.FC<MediaRailProps> = ({
   onWatchTrailer,
   watchlistIds = [],
   favoriteIds = [],
+  watchlistKeys,
+  favoriteKeys,
   onToggleWatchlist,
   onToggleFavorite,
   autoplayTrailers = true,
@@ -100,7 +105,9 @@ export const MediaRail: React.FC<MediaRailProps> = ({
         role="region"
         aria-label={`${title} scrollable collection`}
       >
-        {items.map((item) => (
+        {items.map((item) => {
+          const itemKey = getMediaKey(item.id, item.mediaType);
+          return (
           <div
             key={`${item.mediaType}-${item.id}`}
             className="w-[164px] sm:w-[202px] md:w-[230px] shrink-0 snap-start"
@@ -109,17 +116,18 @@ export const MediaRail: React.FC<MediaRailProps> = ({
               item={item}
               onSelect={onSelect}
               onWatchTrailer={onWatchTrailer}
-              isWatchlisted={watchlistIds.includes(item.id)}
-              isFavorite={favoriteIds.includes(item.id)}
+              isWatchlisted={watchlistKeys ? watchlistKeys.includes(itemKey) : watchlistIds.includes(item.id)}
+              isFavorite={favoriteKeys ? favoriteKeys.includes(itemKey) : favoriteIds.includes(item.id)}
               onToggleWatchlist={onToggleWatchlist}
               onToggleFavorite={onToggleFavorite}
               autoplayTrailers={autoplayTrailers}
               isOnline={isOnline}
               showReleaseDate={showReleaseDate}
-              communityRating={communityRatings?.[`${item.mediaType}:${item.id}`]}
+              communityRating={communityRatings?.[itemKey]}
             />
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

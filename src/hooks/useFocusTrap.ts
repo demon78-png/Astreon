@@ -9,9 +9,12 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(', ');
 
+const activeFocusTrapStack: symbol[] = [];
+
 /**
  * Traps keyboard focus inside an open modal dialog and restores focus
- * to the triggering element when the dialog closes.
+ * to the triggering element when the dialog closes. Only the topmost
+ * active modal in the stack handles Escape and Tab trapping.
  */
 export function useFocusTrap(
   containerRef: RefObject<HTMLElement | null>,
@@ -21,10 +24,16 @@ export function useFocusTrap(
   useEffect(() => {
     if (!isOpen || typeof document === 'undefined') return;
 
+    const trapId = Symbol('focus-trap');
+    activeFocusTrapStack.push(trapId);
+    const isTopmost = () =>
+      activeFocusTrapStack[activeFocusTrapStack.length - 1] === trapId;
+
     const previouslyFocused = document.activeElement as HTMLElement | null;
 
     // Move initial focus inside dialog if focus is not already within container
     const focusTimer = setTimeout(() => {
+      if (!isTopmost()) return;
       const container = containerRef.current;
       if (!container) return;
       if (container.contains(document.activeElement)) return;
@@ -39,6 +48,8 @@ export function useFocusTrap(
     }, 20);
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isTopmost()) return;
+
       if (e.key === 'Escape' && onClose) {
         e.stopPropagation();
         onClose();
@@ -78,6 +89,10 @@ export function useFocusTrap(
     document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
+      const idx = activeFocusTrapStack.lastIndexOf(trapId);
+      if (idx !== -1) {
+        activeFocusTrapStack.splice(idx, 1);
+      }
       clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleKeyDown, true);
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {

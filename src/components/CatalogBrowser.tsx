@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MediaItem, MediaType, FilterState } from '../types/entertainment';
 import { MediaCard } from './MediaCard';
-import { filterMedia, sortMedia, extractCatalogFacets } from '../utils/entertainment';
+import { filterMedia, sortMedia, extractCatalogFacets, getMediaKey } from '../utils/entertainment';
 import type { CatalogFilterParams } from '../utils/routing';
 import { Filter, RotateCcw, Film, Tv, Loader2, ChevronDown } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
 import type { MediaStarStats } from '../utils/ratings';
+import { CatalogCardGridSkeleton } from './Skeletons';
 
 interface CatalogBrowserProps {
   mediaType: MediaType | 'all';
@@ -14,6 +15,8 @@ interface CatalogBrowserProps {
   onWatchTrailer?: (item: MediaItem) => void;
   watchlistIds?: number[];
   favoriteIds?: number[];
+  watchlistKeys?: string[];
+  favoriteKeys?: string[];
   onToggleWatchlist?: (item: MediaItem) => void;
   onToggleFavorite?: (item: MediaItem) => void;
   title: string;
@@ -22,6 +25,7 @@ interface CatalogBrowserProps {
   onFiltersChange?: (filters: CatalogFilterParams) => void;
   hasMore?: boolean;
   loadingMore?: boolean;
+  isLoading?: boolean;
   onLoadMore?: (filters: CatalogFilterParams) => void;
   autoplayTrailers?: boolean;
   isOnline?: boolean;
@@ -55,6 +59,8 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
   onWatchTrailer,
   watchlistIds = [],
   favoriteIds = [],
+  watchlistKeys,
+  favoriteKeys,
   onToggleWatchlist,
   onToggleFavorite,
   title,
@@ -63,6 +69,7 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
   onFiltersChange,
   hasMore = false,
   loadingMore = false,
+  isLoading = false,
   onLoadMore,
   autoplayTrailers = true,
   isOnline = true,
@@ -325,24 +332,31 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
       </div>
 
       {/* Grid of Cards */}
-      {filteredItems.length > 0 ? (
+      {isLoading ? (
+        <div data-testid="catalog-filter-skeleton">
+          <CatalogCardGridSkeleton count={10} />
+        </div>
+      ) : filteredItems.length > 0 ? (
         <div className="space-y-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-5 lg:gap-6">
-            {filteredItems.map((item) => (
+            {filteredItems.map((item) => {
+              const itemKey = getMediaKey(item.id, item.mediaType);
+              return (
               <MediaCard
-                key={item.id}
+                key={`${item.mediaType}-${item.id}`}
                 item={item}
                 onSelect={onSelect}
                 onWatchTrailer={onWatchTrailer}
-                isWatchlisted={watchlistIds.includes(item.id)}
-                isFavorite={favoriteIds.includes(item.id)}
+                isWatchlisted={watchlistKeys ? watchlistKeys.includes(itemKey) : watchlistIds.includes(item.id)}
+                isFavorite={favoriteKeys ? favoriteKeys.includes(itemKey) : favoriteIds.includes(item.id)}
                 onToggleWatchlist={onToggleWatchlist}
                 onToggleFavorite={onToggleFavorite}
                 autoplayTrailers={autoplayTrailers}
                 isOnline={isOnline}
-                communityRating={communityRatings?.[`${item.mediaType}:${item.id}`]}
+                communityRating={communityRatings?.[itemKey]}
               />
-            ))}
+              );
+            })}
           </div>
 
           {hasMore && onLoadMore && (

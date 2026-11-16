@@ -1,4 +1,34 @@
-import type { MediaItem, FilterState, UserReview, WatchlistItem, WatchHistoryItem } from '../types/entertainment.ts';
+import type { MediaItem, MediaType, FilterState, UserReview, WatchlistItem, WatchHistoryItem } from '../types/entertainment.ts';
+
+/**
+ * Canonical media-type-scoped key to prevent movie/TV numeric TMDB ID collisions.
+ */
+export function getMediaKey(mediaId: number, mediaType: MediaType): string {
+  return `${mediaType}:${mediaId}`;
+}
+
+/**
+ * Deterministic Firestore-safe document ID scoped by mediaType and mediaId.
+ */
+export function buildSavedEntryDocId(
+  prefix: 'wl' | 'fav',
+  mediaId: number,
+  mediaType: MediaType
+): string {
+  const cleanType: MediaType = mediaType === 'tv' ? 'tv' : 'movie';
+  return `${prefix}_${cleanType}_${Math.trunc(Math.abs(mediaId))}`;
+}
+
+/**
+ * Check whether an entry list contains a matching (mediaId, mediaType) pair.
+ */
+export function hasMediaEntry(
+  entries: ReadonlyArray<{ mediaId: number; mediaType: MediaType }>,
+  mediaId: number,
+  mediaType: MediaType
+): boolean {
+  return entries.some((entry) => entry.mediaId === mediaId && entry.mediaType === mediaType);
+}
 
 /**
  * Format numeric rating to 1 decimal place with safety checks
@@ -266,14 +296,19 @@ export function extractCatalogFacets(items: MediaItem[]): {
 }
 
 /**
- * Calculate ASTREON community aggregate ratings
+ * Calculate ASTREON community aggregate ratings, optionally scoped by mediaType
  */
-export function calculateCommunityRating(reviews: UserReview[]): {
+export function calculateCommunityRating(
+  reviews: UserReview[],
+  mediaType?: MediaType
+): {
   average: number;
   count: number;
   formatted: string;
 } {
-  const published = reviews.filter((r) => r.status === 'published');
+  const published = reviews.filter(
+    (r) => r.status === 'published' && (!mediaType || !r.mediaType || r.mediaType === mediaType)
+  );
   if (published.length === 0) {
     return { average: 0, count: 0, formatted: 'No reviews yet' };
   }

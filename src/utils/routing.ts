@@ -42,6 +42,8 @@ const PATH_TO_VIEW: Record<string, AppView> = {
   '/discover': 'discover',
   '/movies': 'movies',
   '/tv': 'tv',
+  '/series': 'tv',
+  '/shows': 'tv',
   '/news': 'news',
   '/editorial': 'news',
   '/account': 'account',

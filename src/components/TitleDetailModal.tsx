@@ -134,11 +134,13 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
   const [editStars, setEditStars] = useState<number>(4);
   const [editText, setEditText] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const [reportedIds, setReportedIds] = useState<string[]>([]);
+  const [reportNotice, setReportNotice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'seasons' | 'cast' | 'reviews'>('overview');
   const [failedCastImages, setFailedCastImages] = useState<Record<number, boolean>>({});
-  const [failedSimilarImages, setFailedSimilarImages] = useState<Record<number, boolean>>({});
+  const [failedSimilarImages, setFailedSimilarImages] = useState<Record<string, boolean>>({});
   const [failedProviderLogos, setFailedProviderLogos] = useState<Record<number, boolean>>({});
   const [failedEpisodeStills, setFailedEpisodeStills] = useState<Record<number, boolean>>({});
 
@@ -190,6 +192,8 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     setReviewSuccess('');
     setReviewError('');
     setEditingReviewId(null);
+    setEditError('');
+    setReportNotice('');
     setFailedCastImages({});
     setFailedSimilarImages({});
     setFailedProviderLogos({});
@@ -211,7 +215,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     });
 
     setLoadingReviews(true);
-    getReviews(item.id).then((res) => {
+    getReviews(item.id, item.mediaType).then((res) => {
       if (mounted) {
         setReviews(res);
         setLoadingReviews(false);
@@ -256,8 +260,16 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
   );
 
   const sortedReviews = useMemo(
-    () => sortReviews(reviews.filter((r) => r.status !== 'flagged'), reviewSort),
-    [reviews, reviewSort]
+    () =>
+      sortReviews(
+        reviews.filter(
+          (r) =>
+            r.status !== 'flagged' &&
+            (!r.mediaType || !activeItem?.mediaType || r.mediaType === activeItem.mediaType)
+        ),
+        reviewSort
+      ),
+    [reviews, reviewSort, activeItem?.mediaType]
   );
 
   const similarTitles = useMemo(() => {
@@ -287,7 +299,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
   const year = formatReleaseYear(activeItem.releaseDate || activeItem.firstAirDate);
   const tmdbScore = formatRating(activeItem.voteAverage);
   const runtime = formatRuntime(activeItem.runtime);
-  const communityStats = calculateCommunityRating(reviews);
+  const communityStats = calculateCommunityRating(reviews, activeItem.mediaType);
   const hasTrailer = activeItem.videos && activeItem.videos.some((v) => v.site === 'YouTube' && v.key);
 
   const handleStarRatingSubmit = async (stars: number, note: string): Promise<boolean> => {
@@ -358,10 +370,15 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     setEditingReviewId(rev.id);
     setEditStars(clampStarRating(getReviewStarValue(rev)));
     setEditText(rev.reviewText);
+    setEditError('');
   };
 
   const handleSaveEdit = async (rev: UserReview) => {
-    if (editText.trim().length < 5 && !rev.starRating) return;
+    if (editText.trim().length < 5 && !rev.starRating) {
+      setEditError('Review must be at least 5 characters long.');
+      return;
+    }
+    setEditError('');
     setSavingEdit(true);
     const updated = await updateReview(rev, {
       starRating: clampStarRating(editStars),
@@ -371,8 +388,11 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     if (updated) {
       setReviews((prev) => prev.map((r) => (r.id === rev.id ? updated : r)));
       setEditingReviewId(null);
+      setEditError('');
       onReviewUpserted?.(updated);
       onReviewsChanged?.();
+    } else {
+      setEditError('Failed to save changes. Please try again.');
     }
   };
 
@@ -391,6 +411,8 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
       return;
     }
     const alreadyVoted = helpfulVotedIds.includes(rev.id);
+    const prevVotedIds = helpfulVotedIds;
+    const prevHelpfulCount = rev.helpfulCount || 0;
     // Optimistic update
     setHelpfulVotedIds((prev) =>
       alreadyVoted ? prev.filter((id) => id !== rev.id) : [...prev, rev.id]
@@ -398,7 +420,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
     setReviews((prev) =>
       prev.map((r) =>
         r.id === rev.id
-          ? { ...r, helpfulCount: Math.max(0, (r.helpfulCount || 0) + (alreadyVoted ? -1 : 1)) }
+          ? { ...r, helpfulCount: Math.max(0, prevHelpfulCount + (alreadyVoted ? -1 : 1)) }
           : r
       )
     );
@@ -415,18 +437,33 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
             : [...prev, rev.id]
           : prev.filter((id) => id !== rev.id)
       );
+    } else {
+      // Roll back optimistic state on failure
+      setHelpfulVotedIds(prevVotedIds);
+      setReviews((prev) =>
+        prev.map((r) => (r.id === rev.id ? { ...r, helpfulCount: prevHelpfulCount } : r))
+      );
     }
   };
 
   const handleReport = async (reviewId: string) => {
+    if (!currentUser) {
+      onOpenAuth();
+      return;
+    }
     if (reportedIds.includes(reviewId)) return;
-    await submitContentReport({
+    setReportNotice('');
+    const ok = await submitContentReport({
       targetType: 'review',
       targetId: reviewId,
       reason: 'User flagged community review for moderation audit',
-      reporterId: currentUser?.uid
+      reporterId: currentUser.uid
     });
-    setReportedIds((prev) => [...prev, reviewId]);
+    if (ok) {
+      setReportedIds((prev) => (prev.includes(reviewId) ? prev : [...prev, reviewId]));
+    } else {
+      setReportNotice('Unable to submit report right now. Please try again.');
+    }
   };
 
   const handleShareTitle = async () => {
@@ -645,7 +682,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                   {collectionMenuOpen && currentUser && (
                     <div
                       data-testid="save-to-collection-popover"
-                      className="absolute right-0 mt-2 w-64 rounded-xl bg-[#080A12] border border-[#272B3A] shadow-2xl p-3 z-40 space-y-2.5 animate-in fade-in duration-150"
+                      className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 max-w-[calc(100vw-2.5rem)] rounded-xl bg-[#080A12] border border-[#272B3A] shadow-2xl p-3 z-40 space-y-2.5 animate-in fade-in duration-150"
                     >
                       {customCollections.length > 0 && (
                         <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
@@ -936,7 +973,7 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                     </div>
                   ) : (
                     <p className="text-xs text-[#858B9B]">
-                      {t('detail.castUnavailable').replace('Cast information', 'Streaming listings')}
+                      {t('detail.providersUnavailable')}
                     </p>
                   )}
                 </div>
@@ -949,22 +986,24 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                     {t('detail.moreLikeThis')}
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {similarTitles.map((sim) => (
+                    {similarTitles.map((sim) => {
+                      const simKey = `${sim.mediaType}-${sim.id}`;
+                      return (
                       <button
-                        key={sim.id}
+                        key={simKey}
                         type="button"
                         onClick={() => onSelectSimilar?.(sim)}
                         className="group text-left rounded-xl bg-[#080A12] border border-[#272B3A] hover:border-[#8B5CF6]/50 overflow-hidden transition-all cursor-pointer"
                       >
                         <div className="aspect-[16/10] bg-[#191D2B] overflow-hidden flex items-center justify-center">
-                          {(sim.backdropPath || sim.posterPath) && !failedSimilarImages[sim.id] ? (
+                          {(sim.backdropPath || sim.posterPath) && !failedSimilarImages[simKey] ? (
                             <img
                               src={sim.backdropPath || sim.posterPath}
                               alt={sim.title}
                               referrerPolicy="no-referrer"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               onError={() =>
-                                setFailedSimilarImages((prev) => ({ ...prev, [sim.id]: true }))
+                                setFailedSimilarImages((prev) => ({ ...prev, [simKey]: true }))
                               }
                             />
                           ) : (
@@ -983,7 +1022,8 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                           </div>
                         </div>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1267,6 +1307,12 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
               </div>
 
               {/* Existing Reviews List */}
+              {reportNotice && (
+                <p className="text-xs text-rose-400 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{reportNotice}</span>
+                </p>
+              )}
               <div className="space-y-3">
                 {loadingReviews ? (
                   <p className="text-xs text-[#858B9B]">Loading reviews...</p>
@@ -1363,10 +1409,19 @@ export const TitleDetailModal: React.FC<TitleDetailModalProps> = ({
                               rows={3}
                               className="w-full bg-[#191D2B] text-[#F8FAFC] border border-[#272B3A] rounded-xl p-2.5 text-xs focus:outline-none focus:border-[#8B5CF6]"
                             />
+                            {editError && (
+                              <p className="text-xs text-rose-400 flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{editError}</span>
+                              </p>
+                            )}
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
-                                onClick={() => setEditingReviewId(null)}
+                                onClick={() => {
+                                  setEditingReviewId(null);
+                                  setEditError('');
+                                }}
                                 className="px-3 py-1 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] rounded-lg bg-[#191D2B] cursor-pointer"
                               >
                                 Cancel

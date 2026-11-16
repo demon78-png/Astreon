@@ -13,7 +13,8 @@ import {
   Film,
   Tv,
   Newspaper,
-  FolderHeart
+  FolderHeart,
+  Keyboard
 } from 'lucide-react';
 import { UserProfile } from '../types/entertainment';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -25,6 +26,7 @@ interface NavbarProps {
   onNavigate: (view: string) => void;
   onOpenSearch: () => void;
   onOpenShare: () => void;
+  onOpenShortcuts?: () => void;
   currentUser: UserProfile | null;
   onOpenAuth: () => void;
   onSignOut: () => void;
@@ -36,6 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
   onOpenSearch,
   onOpenShare,
+  onOpenShortcuts,
   currentUser,
   onOpenAuth,
   onSignOut,
@@ -68,10 +71,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [userDropdownOpen]);
 
   const navLinks = [
-    { id: 'discover', label: t('nav.discover'), icon: Compass },
-    { id: 'movies', label: t('nav.movies'), icon: Film },
-    { id: 'tv', label: t('nav.tv'), icon: Tv },
-    { id: 'news', label: t('nav.editorial'), icon: Newspaper }
+    { id: 'discover', label: t('nav.discover'), icon: Compass, shortcut: '1' },
+    { id: 'movies', label: t('nav.movies'), icon: Film, shortcut: '2' },
+    { id: 'tv', label: t('nav.tv'), icon: Tv, shortcut: '3' },
+    { id: 'news', label: t('nav.editorial'), icon: Newspaper, shortcut: '4' }
   ];
 
   const handleLinkClick = (id: string) => {
@@ -107,6 +110,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     isActive ? 'text-[#F8FAFC] font-semibold' : 'hover:text-[#F8FAFC]'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
+                  aria-keyshortcuts={link.shortcut}
+                  title={`${link.label} (${link.shortcut})`}
                 >
                   {link.label}
                   {isActive && (
@@ -149,6 +154,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={onOpenSearch}
               className="flex items-center justify-center gap-2 min-h-[40px] min-w-[40px] md:min-h-0 md:min-w-0 px-2.5 sm:px-3 py-1.5 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] bg-[#111421] hover:bg-[#191D2B] border border-[#272B3A] rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0"
               aria-label={t('nav.search')}
+              aria-keyshortcuts="/"
+              title={`${t('nav.search')} (/)`}
+              data-testid="navbar-search-btn"
             >
               <Search className="w-4 h-4 md:w-3.5 md:h-3.5 text-[#858B9B]" />
               <span className="hidden sm:inline">{t('nav.search')}</span>
@@ -229,12 +237,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
 
                     <button
-                      onClick={() => handleLinkClick('account')}
+                      onClick={() => handleLinkClick('profile')}
+                      aria-keyshortcuts="6"
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
                     >
                       <User className="w-3.5 h-3.5 text-[#858B9B]" />
                       <span>{t('nav.preferences')}</span>
+                      <kbd className="ml-auto text-[10px] font-mono text-[#858B9B]">6</kbd>
                     </button>
+
+                    {onOpenShortcuts && (
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onOpenShortcuts();
+                        }}
+                        aria-keyshortcuts="?"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 md:py-2 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] hover:bg-[#191D2B] text-left transition-colors cursor-pointer"
+                      >
+                        <Keyboard className="w-3.5 h-3.5 text-[#38BDF8]" />
+                        <span>{t('shortcuts.toggleHelp')}</span>
+                        <kbd className="ml-auto text-[10px] font-mono text-[#858B9B]">?</kbd>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {

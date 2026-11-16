@@ -36,10 +36,21 @@ service cloud.firestore {
       return resource.data;
     }
 
-    function isValidUser(data) {
-      return data.uid is string &&
-             data.displayName is string && data.displayName.size() <= 100 &&
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt']) &&
+             data.keys().hasOnly(['uid', 'displayName', 'email', 'avatar', 'preferredGenres', 'notificationPreferences', 'playbackPreferences', 'watchRegion', 'createdAt', 'updatedAt', 'isAdmin']) &&
+             data.uid is string && data.uid == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
              data.email is string && data.email.size() <= 150 &&
+             (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 500)) &&
+             (!('preferredGenres' in data) || (data.preferredGenres is list && data.preferredGenres.size() <= 20)) &&
+             (!('notificationPreferences' in data) || (
+               data.notificationPreferences is map &&
+               data.notificationPreferences.keys().hasOnly(['emailAlerts', 'newReleases', 'curatedWeekly'])
+             )) &&
+             (!('isAdmin' in data) || data.isAdmin == false || isAdmin()) &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64)) &&
              (!('watchRegion' in data) || (data.watchRegion is string && data.watchRegion.size() >= 2 && data.watchRegion.size() <= 10)) &&
              (!('playbackPreferences' in data) || (
                data.playbackPreferences is map &&
@@ -151,17 +162,22 @@ service cloud.firestore {
     }
 
     function isValidReport(data) {
-      return data.reporterId is string && data.reporterId == request.auth.uid &&
+      return data.keys().hasAll(['id', 'reporterId', 'targetType', 'targetId', 'reason', 'status', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'reporterId', 'targetType', 'targetId', 'reason', 'status', 'createdAt']) &&
+             isValidId(data.id) &&
+             data.reporterId is string && data.reporterId == request.auth.uid &&
              data.targetType in ['review', 'article', 'user'] &&
-             data.targetId is string && data.targetId.size() <= 128 &&
-             data.reason is string && data.reason.size() <= 1000;
+             data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128 &&
+             data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 1000 &&
+             data.status == 'pending' &&
+             data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 64;
     }
 
     // User profiles & Private Subcollections
     match /users/{userId} {
       allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
       allow list: if isAdmin();
-      allow create, update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming());
+      allow create, update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming(), userId);
       allow delete: if isValidId(userId) && (isOwner(userId) || isAdmin());
 
       // Private User Watchlist Subcollection
@@ -227,7 +243,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isValidId(reviewId) && isSignedIn() && isValidReview(incoming()) && (!('helpfulCount' in incoming()) || incoming().helpfulCount == 0);
       allow update: if isValidId(reviewId) && (
-        (isSignedIn() && existing().userId == request.auth.uid && isValidReview(incoming()) && incoming().userId == existing().userId && incoming().mediaId == existing().mediaId && incoming().get('helpfulCount', 0) == existing().get('helpfulCount', 0)) ||
+        (isSignedIn() && existing().userId == request.auth.uid && isValidReview(incoming()) && incoming().id == existing().id && incoming().userId == existing().userId && incoming().mediaId == existing().mediaId && incoming().mediaType == existing().mediaType && incoming().createdAt == existing().createdAt && incoming().status == existing().status && incoming().get('helpfulCount', 0) == existing().get('helpfulCount', 0)) ||
         isValidHelpfulUpdate() ||
         isAdmin()
       );
@@ -254,7 +270,7 @@ service cloud.firestore {
     // Moderation Reports
     match /reports/{reportId} {
       allow read: if isAdmin() || (isSignedIn() && existing().reporterId == request.auth.uid);
-      allow create: if isValidId(reportId) && isSignedIn() && isValidReport(incoming());
+      allow create: if isValidId(reportId) && isSignedIn() && isValidReport(incoming()) && incoming().id == reportId;
       allow update, delete: if isValidId(reportId) && isAdmin();
     }
 

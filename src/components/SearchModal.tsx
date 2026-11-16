@@ -600,7 +600,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         {/* Keyboard navigation hint footer */}
         <div className="hidden md:flex items-center justify-between px-4 py-2 border-t border-[#272B3A] bg-[#080A12] text-[11px] font-mono text-[#858B9B]">
           <span>{t('search.keyboardHint')}</span>
-          <span>ASTREON Search</span>
+          <span>/ {t('shortcuts.toggleSearch')} · ? {t('shortcuts.toggleHelp')}</span>
         </div>
       </div>
     </div>

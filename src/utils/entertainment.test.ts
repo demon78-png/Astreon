@@ -15,7 +15,10 @@ import {
   buildCardTrailerEmbedUrl,
   getTodayIsoDate,
   isUpcomingReleaseDate,
-  getUpcomingMediaItems
+  getUpcomingMediaItems,
+  getMediaKey,
+  buildSavedEntryDocId,
+  hasMediaEntry
 } from './entertainment.ts';
 import type { MediaItem, UserReview, WatchlistItem } from '../types/entertainment.ts';
 
@@ -479,5 +482,37 @@ test('getPersonalizedRecommendations incorporates watchHistory genre affinity an
   assert.equal(converted[0].title, 'Past History Pick');
 });
 
+test('getMediaKey, buildSavedEntryDocId, and hasMediaEntry isolate movie vs tv numeric ID collisions', () => {
+  assert.equal(getMediaKey(550, 'movie'), 'movie:550');
+  assert.equal(getMediaKey(550, 'tv'), 'tv:550');
+  assert.equal(buildSavedEntryDocId('wl', 550, 'movie'), 'wl_movie_550');
+  assert.equal(buildSavedEntryDocId('fav', 550, 'tv'), 'fav_tv_550');
 
+  const entries = [{ mediaId: 550, mediaType: 'movie' as const }];
+  assert.equal(hasMediaEntry(entries, 550, 'movie'), true);
+  assert.equal(hasMediaEntry(entries, 550, 'tv'), false);
+});
 
+test('calculateCommunityRating filters by optional mediaType when movie and tv share a numeric ID', () => {
+  const mixedReviews: UserReview[] = [
+    ...SAMPLE_REVIEWS,
+    {
+      id: 'r-tv-1',
+      userId: 'u4',
+      userName: 'Sora',
+      mediaId: 1,
+      mediaType: 'tv',
+      rating: 4,
+      reviewText: 'Rough pilot.',
+      status: 'published',
+      createdAt: '2025-04-01T10:00:00.000Z',
+      helpfulCount: 1
+    }
+  ];
+  const movieOnly = calculateCommunityRating(mixedReviews, 'movie');
+  const tvOnly = calculateCommunityRating(mixedReviews, 'tv');
+  assert.equal(movieOnly.count, 3);
+  assert.equal(movieOnly.formatted, '8.3/10');
+  assert.equal(tvOnly.count, 1);
+  assert.equal(tvOnly.formatted, '4.0/10');
+});

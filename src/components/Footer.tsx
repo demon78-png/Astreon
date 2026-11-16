@@ -6,9 +6,15 @@ interface FooterProps {
   onOpenLegal: (tab: 'about' | 'privacy' | 'terms' | 'attribution' | 'help' | 'contact') => void;
   onNavigate: (view: string) => void;
   onOpenShare?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenLegal, onNavigate, onOpenShare }) => {
+export const Footer: React.FC<FooterProps> = ({
+  onOpenLegal,
+  onNavigate,
+  onOpenShare,
+  onOpenShortcuts
+}) => {
   const { t } = useI18n();
 
   return (
@@ -75,6 +81,19 @@ export const Footer: React.FC<FooterProps> = ({ onOpenLegal, onNavigate, onOpenS
                   className="py-1 text-[#38BDF8] hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-medium text-left"
                 >
                   <span>{t('footer.mobileAppQr')}</span>
+                </button>
+              </li>
+            )}
+            {onOpenShortcuts && (
+              <li>
+                <button
+                  type="button"
+                  onClick={onOpenShortcuts}
+                  data-testid="footer-shortcuts-btn"
+                  aria-keyshortcuts="?"
+                  className="py-1 text-[#A1A1AA] hover:text-[#F8FAFC] transition-colors cursor-pointer text-left"
+                >
+                  {t('shortcuts.footerButton')}
                 </button>
               </li>
             )}

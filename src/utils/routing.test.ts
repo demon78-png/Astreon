@@ -16,6 +16,8 @@ test('parseRoute resolves canonical views and trailing slashes', () => {
   });
   assert.equal(parseRoute('/movies/', '').view, 'movies');
   assert.equal(parseRoute('/tv', '').view, 'tv');
+  assert.equal(parseRoute('/series', '').view, 'tv');
+  assert.equal(parseRoute('/shows/', '').view, 'tv');
   assert.equal(parseRoute('/news', '').view, 'news');
   assert.equal(parseRoute('/editorial', '').view, 'news');
   assert.equal(parseRoute('/account', '').view, 'account');
