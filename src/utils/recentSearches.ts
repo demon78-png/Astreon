@@ -10,6 +10,11 @@ function getDefaultStorage(): StorageLike | null {
   return null;
 }
 
+export function getRecentSearchesStorageKey(userId?: string): string {
+  const cleanId = typeof userId === 'string' ? userId.trim() : '';
+  return cleanId ? `${RECENT_SEARCHES_STORAGE_KEY}_${cleanId}` : RECENT_SEARCHES_STORAGE_KEY;
+}
+
 export function normalizeRecentSearches(
   rawList: unknown,
   maxItems: number = MAX_RECENT_SEARCHES
@@ -34,11 +39,12 @@ export function normalizeRecentSearches(
 
 export function loadRecentSearches(
   storage: StorageLike | null = getDefaultStorage(),
-  maxItems: number = MAX_RECENT_SEARCHES
+  maxItems: number = MAX_RECENT_SEARCHES,
+  storageKey: string = RECENT_SEARCHES_STORAGE_KEY
 ): string[] {
   if (!storage) return [];
   try {
-    const raw = storage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+    const raw = storage.getItem(storageKey);
     if (!raw) return [];
     return normalizeRecentSearches(JSON.parse(raw), maxItems);
   } catch {
@@ -49,15 +55,16 @@ export function loadRecentSearches(
 export function saveRecentSearches(
   searches: string[],
   storage: StorageLike | null = getDefaultStorage(),
-  maxItems: number = MAX_RECENT_SEARCHES
+  maxItems: number = MAX_RECENT_SEARCHES,
+  storageKey: string = RECENT_SEARCHES_STORAGE_KEY
 ): string[] {
   const normalized = normalizeRecentSearches(searches, maxItems);
   if (storage) {
     try {
       if (normalized.length === 0) {
-        storage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
+        storage.removeItem(storageKey);
       } else {
-        storage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(normalized));
+        storage.setItem(storageKey, JSON.stringify(normalized));
       }
     } catch {
       // Ignore storage quota errors
@@ -70,35 +77,41 @@ export function addRecentSearch(
   current: string[],
   term: string,
   storage: StorageLike | null = getDefaultStorage(),
-  maxItems: number = MAX_RECENT_SEARCHES
+  maxItems: number = MAX_RECENT_SEARCHES,
+  storageKey: string = RECENT_SEARCHES_STORAGE_KEY
 ): string[] {
   const cleanTerm = term.trim();
   if (!cleanTerm) return normalizeRecentSearches(current, maxItems);
 
+  const baseList = storage ? loadRecentSearches(storage, maxItems, storageKey) : current;
+  const sourceList = baseList.length > 0 ? baseList : current;
+
   const next = [
     cleanTerm,
-    ...current.filter((item) => item.trim().toLowerCase() !== cleanTerm.toLowerCase())
+    ...sourceList.filter((item) => item.trim().toLowerCase() !== cleanTerm.toLowerCase())
   ];
-  return saveRecentSearches(next, storage, maxItems);
+  return saveRecentSearches(next, storage, maxItems, storageKey);
 }
 
 export function removeRecentSearch(
   current: string[],
   term: string,
   storage: StorageLike | null = getDefaultStorage(),
-  maxItems: number = MAX_RECENT_SEARCHES
+  maxItems: number = MAX_RECENT_SEARCHES,
+  storageKey: string = RECENT_SEARCHES_STORAGE_KEY
 ): string[] {
   const target = term.trim().toLowerCase();
   const next = current.filter((item) => item.trim().toLowerCase() !== target);
-  return saveRecentSearches(next, storage, maxItems);
+  return saveRecentSearches(next, storage, maxItems, storageKey);
 }
 
 export function clearRecentSearches(
-  storage: StorageLike | null = getDefaultStorage()
+  storage: StorageLike | null = getDefaultStorage(),
+  storageKey: string = RECENT_SEARCHES_STORAGE_KEY
 ): string[] {
   if (storage) {
     try {
-      storage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
+      storage.removeItem(storageKey);
     } catch {}
   }
   return [];

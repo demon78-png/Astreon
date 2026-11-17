@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MediaItem, NewsArticle } from '../types/entertainment';
 import { formatRating, formatReleaseYear } from '../utils/entertainment';
 import {
+  getRecentSearchesStorageKey,
   loadRecentSearches,
   addRecentSearch,
   removeRecentSearch,
-  clearRecentSearches
+  clearRecentSearches,
+  MAX_RECENT_SEARCHES
 } from '../utils/recentSearches';
-import { Search, X, Film, Tv, Newspaper, Star, Clock, Loader2 } from 'lucide-react';
+import { Search, X, Film, Tv, Newspaper, Star, Clock, Loader2, RotateCcw } from 'lucide-react';
 import { saveSearchQueryToFirestore } from '../services/firebase';
 import { searchMedia } from '../services/api';
 import { useI18n } from '../contexts/I18nContext';
@@ -42,7 +44,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [liveResults, setLiveResults] = useState<MediaItem[] | null>(null);
   const [isSearchingLive, setIsSearchingLive] = useState(false);
   const [searchSource, setSearchSource] = useState<'tmdb' | 'catalog'>('catalog');
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => loadRecentSearches());
+  const recentStorageKey = getRecentSearchesStorageKey(currentUserId);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() =>
+    loadRecentSearches(undefined, MAX_RECENT_SEARCHES, recentStorageKey)
+  );
 
   const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +57,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setRecentSearches(loadRecentSearches());
+      setRecentSearches(loadRecentSearches(undefined, MAX_RECENT_SEARCHES, recentStorageKey));
       setActiveIndex(-1);
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
@@ -64,7 +69,19 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       setIsSearchingLive(false);
       setSearchSource('catalog');
     }
-  }, [isOpen]);
+  }, [isOpen, recentStorageKey]);
+
+  // Keep recent searches synchronized across browser tabs
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === recentStorageKey) {
+        setRecentSearches(loadRecentSearches(undefined, MAX_RECENT_SEARCHES, recentStorageKey));
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [recentStorageKey]);
 
   // Debounced live TMDB search
   useEffect(() => {
@@ -96,6 +113,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       clearTimeout(timer);
     };
   }, [query, filterType, isOpen, tmdbLanguage]);
+
+  // Persist settled search queries (>= 2 chars) so users who type and view results without pressing Enter still retain them
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!isOpen || trimmed.length < 2) return;
+    const settleTimer = setTimeout(() => {
+      setRecentSearches((prev) =>
+        addRecentSearch(prev, trimmed, undefined, MAX_RECENT_SEARCHES, recentStorageKey)
+      );
+    }, 900);
+    return () => clearTimeout(settleTimer);
+  }, [query, isOpen, recentStorageKey]);
 
   useEffect(() => {
     setActiveIndex(-1);
@@ -179,7 +208,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const saveSearch = (term: string, resultCount?: number) => {
     const cleanTerm = term.trim();
     if (!cleanTerm) return;
-    const updated = addRecentSearch(recentSearches, cleanTerm);
+    const updated = addRecentSearch(
+      recentSearches,
+      cleanTerm,
+      undefined,
+      MAX_RECENT_SEARCHES,
+      recentStorageKey
+    );
     setRecentSearches(updated);
     trackSearchInteraction(
       cleanTerm,
@@ -192,16 +227,25 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   const handleSelectQuery = (term: string) => {
     setQuery(term);
-    saveSearch(term, filteredMedia.length + filteredNews.length);
+    const updated = addRecentSearch(
+      recentSearches,
+      term,
+      undefined,
+      MAX_RECENT_SEARCHES,
+      recentStorageKey
+    );
+    setRecentSearches(updated);
     inputRef.current?.focus();
   };
 
   const handleRemoveRecent = (term: string) => {
-    setRecentSearches((prev) => removeRecentSearch(prev, term));
+    setRecentSearches((prev) =>
+      removeRecentSearch(prev, term, undefined, MAX_RECENT_SEARCHES, recentStorageKey)
+    );
   };
 
   const handleClearRecent = () => {
-    setRecentSearches(clearRecentSearches());
+    setRecentSearches(clearRecentSearches(undefined, recentStorageKey));
   };
 
   return (
@@ -425,9 +469,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSelectQuery(term)}
-                        className="pl-3 pr-1.5 py-1.5 md:py-1 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] cursor-pointer"
+                        aria-label={`${t('search.recent')}: ${term}`}
+                        className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 md:py-1 text-xs text-[#A1A1AA] hover:text-[#F8FAFC] cursor-pointer"
                       >
-                        {term}
+                        <RotateCcw className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                        <span>{term}</span>
                       </button>
                       <button
                         type="button"

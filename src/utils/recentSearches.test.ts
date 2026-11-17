@@ -4,6 +4,7 @@ import type { StorageLike } from './analytics.ts';
 import {
   RECENT_SEARCHES_STORAGE_KEY,
   MAX_RECENT_SEARCHES,
+  getRecentSearchesStorageKey,
   loadRecentSearches,
   addRecentSearch,
   removeRecentSearch,
@@ -74,4 +75,23 @@ test('removeRecentSearch and clearRecentSearches update storage cleanly', () => 
   const cleared = clearRecentSearches(storage);
   assert.deepEqual(cleared, []);
   assert.equal(storage.getItem(RECENT_SEARCHES_STORAGE_KEY), null);
+});
+
+test('getRecentSearchesStorageKey isolates recent queries by userId without affecting guest key', () => {
+  const storage = createMemoryStorage();
+  const guestKey = getRecentSearchesStorageKey();
+  const userKey = getRecentSearchesStorageKey('uid_42');
+
+  assert.equal(guestKey, RECENT_SEARCHES_STORAGE_KEY);
+  assert.equal(userKey, `${RECENT_SEARCHES_STORAGE_KEY}_uid_42`);
+
+  addRecentSearch([], 'Dune', storage, MAX_RECENT_SEARCHES, guestKey);
+  addRecentSearch([], 'Severance', storage, MAX_RECENT_SEARCHES, userKey);
+
+  assert.deepEqual(loadRecentSearches(storage, MAX_RECENT_SEARCHES, guestKey), ['Dune']);
+  assert.deepEqual(loadRecentSearches(storage, MAX_RECENT_SEARCHES, userKey), ['Severance']);
+
+  clearRecentSearches(storage, userKey);
+  assert.deepEqual(loadRecentSearches(storage, MAX_RECENT_SEARCHES, guestKey), ['Dune']);
+  assert.deepEqual(loadRecentSearches(storage, MAX_RECENT_SEARCHES, userKey), []);
 });
